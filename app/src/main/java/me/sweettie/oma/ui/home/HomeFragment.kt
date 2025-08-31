@@ -22,10 +22,7 @@ class HomeFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null // избегаем утечек памяти
+        _binding = null
     }
 
-    companion object {
-        fun newInstance() = HomeFragment()
-    }
 }
