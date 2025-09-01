@@ -1,0 +1,3 @@
+[submodule "oma-meta"]
+	path = oma-meta
+	url = https://github.com/Sovamorco/oma-meta.git
