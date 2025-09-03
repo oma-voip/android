@@ -1,5 +1,7 @@
 package me.sweettie.oma.network
 
+import io.grpc.Channel
+import io.grpc.ClientInterceptors
 import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
 import kotlinx.coroutines.Dispatchers
@@ -14,20 +16,47 @@ object GrpcClient {
         .useTransportSecurity()
         .build()
 
-    private val stub = OmaGrpc.newBlockingStub(channel) // для блокирующих вызовов
+    private val ic: Channel = ClientInterceptors.intercept(channel, AuthInterceptor())
 
-    suspend fun login(username: String, password: String): OmaOuterClass.LoginResponse {
-        val request = OmaOuterClass.LoginRequest.newBuilder()
-            .setUsername(username)
-            .setPassword(password)
-            .build()
+    private val stub = OmaGrpc.newBlockingStub(ic)
 
-        return withContext(Dispatchers.IO) {
-            stub.login(request)
+    suspend fun login(
+        username: String,
+        password: String,
+        onSuccess: (OmaOuterClass.LoginResponse) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        try {
+            val request = OmaOuterClass.LoginRequest.newBuilder()
+                .setUsername(username)
+                .setPassword(password)
+                .build()
+
+            onSuccess(withContext(Dispatchers.IO) {
+                stub.login(request)
+            })
+        } catch (e: Exception) {
+            onError(e)
         }
     }
 
     fun shutdown() {
         channel.shutdown()
+    }
+
+    //, onError: (Exception) -> Unit
+
+    suspend fun getUser(id: String): OmaOuterClass.User? {
+        return try {
+            val request = OmaOuterClass.GetUserRequest.newBuilder()
+                .setId(id)
+                .build()
+
+            withContext(Dispatchers.IO) {
+                stub.getUser(request)
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 }

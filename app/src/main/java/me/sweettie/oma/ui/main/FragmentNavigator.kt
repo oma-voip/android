@@ -24,6 +24,7 @@ class FragmentNavigator(private val fragmentManager: FragmentManager, private va
 
     fun popBackStack() {
         fragmentManager.popBackStack()
+
     }
 
     fun popBackStackTo(tag: String, inclusive: Boolean = false) {
