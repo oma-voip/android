@@ -21,6 +21,7 @@ object SecurePrefs {
             Boolean::class -> editor.putBoolean(key, value as Boolean)
             Long::class -> editor.putLong(key, value as Long)
             Float::class -> editor.putFloat(key, value as Float)
+            Nothing::class -> editor.remove(key)
             else -> throw IllegalArgumentException("Unsupported type")
         }
         editor.apply()

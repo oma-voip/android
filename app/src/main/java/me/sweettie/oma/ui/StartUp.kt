@@ -9,8 +9,11 @@ import me.sweettie.oma.R
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.login.LoginActivity
 import me.sweettie.oma.ui.main.MainActivity
+import me.sweettie.oma.ui.register.ConfirmEmailActivity
+import me.sweettie.oma.ui.register.RegisterActivity
 import me.sweettie.oma.utils.SecurePrefs
 import me.sweettie.oma.utils.SessionManager
+import me.sweettie.oma.utils.SessionState
 import me.sweettie.oma.utils.Utils
 
 class StartUp : AppCompatActivity() {
@@ -24,7 +27,7 @@ class StartUp : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.start_up)
         SecurePrefs.init(this)
-
+        SessionManager.loadState()
         lifecycleScope.launch {
             try {
                 val token: String? = SecurePrefs.sf.getString("token", null)
@@ -40,7 +43,18 @@ class StartUp : AppCompatActivity() {
                     }
                 }
                 keepSplash = false
-                Utils.openActivity(this@StartUp, LoginActivity::class.java)
+                when (SessionManager.currentState) {
+                    SessionState.SIGNIN -> Utils.openActivity(
+                        this@StartUp,
+                        RegisterActivity::class.java
+                    )
+                    SessionState.CEMAIL -> Utils.openActivity(
+                        this@StartUp,
+                        ConfirmEmailActivity::class.java
+                    )
+                    else -> Utils.openActivity(this@StartUp, LoginActivity::class.java)
+
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }

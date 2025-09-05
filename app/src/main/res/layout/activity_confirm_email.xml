@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:ignore="LabelFor"
+    android:padding="24dp"
+    android:theme="@style/Theme.Oma"
+    tools:context=".ui.register.ConfirmEmailActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/enter_the_confirmation_code"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        style="@style/Theme.Oma.Quiet"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/we_send_code_to_email"
+        android:layout_marginBottom="32dp"
+        android:textAlignment="center" />
+
+
+    <com.chaos.view.PinView
+        style="@style/PinWidget.PinView"
+        android:id="@+id/pinView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textStyle="bold"
+        android:inputType="text"
+        android:cursorVisible="true"
+        android:textColor="@color/colorForegroundLight"
+        app:cursorColor="?attr/colorAccent"
+        app:lineColor="@drawable/edit_text_underline"
+        app:hideLineWhenFilled="false"
+        android:layout_gravity="center_horizontal"
+        app:itemCount="8"
+        app:viewType="line" />
+
+    <Button
+        style="@style/Theme.Oma.Input"
+        android:id="@+id/btnSubmit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/confirm"
+        android:layout_marginTop="32dp"
+        android:enabled="false" />
+
+
+</LinearLayout>

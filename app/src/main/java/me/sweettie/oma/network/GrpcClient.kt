@@ -20,6 +20,51 @@ object GrpcClient {
 
     private val stub = OmaGrpc.newBlockingStub(ic)
 
+
+    suspend fun register(
+        username: String,
+        password: String,
+        email: String,
+        onSuccess: () -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        try {
+            val req = OmaOuterClass.RegisterRequest.newBuilder()
+                .setEmail(email)
+                .setUsername(username)
+                .setPassword(password)
+                .build()
+
+            withContext(Dispatchers.IO) {
+                stub.register(req)
+            }
+            onSuccess()
+        } catch (e: Exception) {
+            onError(e)
+        }
+    }
+
+    suspend fun confirmCode(
+        code: String,
+        email: String,
+        onSuccess: () -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        try {
+            val req = OmaOuterClass.VerifyEmailRequest.newBuilder()
+                .setCode(code)
+                .setEmail(email)
+                .build()
+
+            withContext(Dispatchers.IO) {
+                stub.verifyEmail(req)
+            }
+            onSuccess()
+        } catch (e: Exception) {
+            onError(e)
+        }
+    }
+
     suspend fun login(
         username: String,
         password: String,
@@ -59,4 +104,22 @@ object GrpcClient {
             null
         }
     }
+
+    suspend fun resendCode(email: String, onComplete: (Boolean) -> Unit) {
+        var b = false
+        try {
+            val request = OmaOuterClass.ResendVerificationRequest.newBuilder()
+                .setEmail(email)
+                .build()
+
+            withContext(Dispatchers.IO) {
+                stub.resendVerification(request)
+            }
+        } catch (e: Exception) {
+            b = true
+        }
+        onComplete.invoke(b)
+    }
+
+
 }

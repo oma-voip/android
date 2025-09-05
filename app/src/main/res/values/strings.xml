@@ -7,8 +7,20 @@
     <string name="prompt_password">Password</string>
     <string name="action_sign_in">Sign in or register</string>
     <string name="action_sign_in_short">Sign in</string>
+    <string name="action_register_short">Sign up</string>
     <string name="welcome">"Welcome !"</string>
     <string name="invalid_username">Not a valid username</string>
     <string name="invalid_password">Not a valid password</string>
     <string name="login_failed">"Login failed"</string>
+    <string name="registerPrompt">Don\'t have an account yet?\n<u><sup>sing up</sup></u></string>
+    <string name="loginPrompt">Already have an account?\n<u><sup>sign in</sup></u></string>
+    <string name="email">Email</string>
+    <string name="confirmpassword">Confirm password</string>
+    <string name="passwords_not_correct">Passwords don\'t match</string>
+    <string name="we_send_code_to_email">We have sent an 8-digit confirmation code to your email</string>
+    <string name="enter_the_confirmation_code">Enter the confirmation code</string>
+    <string name="confirm">Confirm</string>
+    <string name="register_account_issue">The account is either registered or awaiting email confirmation.</string>
+    <string name="close">Close</string>
+    <string name="confirm_email">conf. email</string>
 </resources>

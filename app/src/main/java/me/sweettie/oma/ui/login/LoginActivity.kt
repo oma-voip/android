@@ -8,10 +8,8 @@ import me.sweettie.oma.R
 import me.sweettie.oma.databinding.ActivityLoginBinding
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.main.MainActivity
-import me.sweettie.oma.utils.SecurePrefs
-import me.sweettie.oma.utils.SessionManager
-import me.sweettie.oma.utils.Utils
-import me.sweettie.oma.utils.onTextUpdate
+import me.sweettie.oma.ui.register.RegisterActivity
+import me.sweettie.oma.utils.*
 
 class LoginActivity : AppCompatActivity() {
 
@@ -21,22 +19,28 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
+        SessionManager.saveState(SessionState.LOGIN)
         setContentView(binding.root)
 
         binding.username.onTextUpdate {
-            binding.login.isEnabled =
-                binding.username.text.toString().isNotEmpty() && it.isNotEmpty()
+            binding.login.isEnabled = isEditablePresent()
         }
 
         binding.password.onTextUpdate {
-            println(binding.username.text.toString().isNotEmpty() && it.isNotEmpty())
-            binding.login.isEnabled =
-                binding.username.text.toString().isNotEmpty() && it.isNotEmpty()
+            binding.login.isEnabled = isEditablePresent()
         }
 
         binding.login.setOnClickListener {
             validateData()
         }
+
+        binding.registerPrompt.setOnClickListener {
+            Utils.openActivity(this@LoginActivity, RegisterActivity::class.java)
+        }
+    }
+
+    private fun isEditablePresent(): Boolean {
+        return binding.username.isPresent() && binding.password.isPresent()
     }
 
     private fun validateData() {

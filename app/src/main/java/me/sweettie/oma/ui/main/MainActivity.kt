@@ -3,6 +3,8 @@ package me.sweettie.oma.ui.main
 import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
 import me.sweettie.oma.R
+import me.sweettie.oma.utils.SessionManager
+import me.sweettie.oma.utils.SessionState
 
 class MainActivity : FragmentActivity() {
 
@@ -12,6 +14,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        SessionManager.saveState(SessionState.MAIN)
 
         navigator = FragmentNavigator(supportFragmentManager, R.id.fragment_container)
 

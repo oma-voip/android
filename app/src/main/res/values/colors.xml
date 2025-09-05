@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -8,4 +8,34 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="icon_background">#333A30</color>
+
+    <color name="colorBackgroundDark">#232323</color>       <!-- th.Bg в createDarkTheme -->
+    <color name="colorMoreBackgroundDark">#131313</color>       <!-- th.Bg в createDarkTheme -->
+    <color name="colorForegroundLight">#FFFFFF</color>     <!-- th.Fg в createDarkTheme -->
+    <color name="colorContrastBackground">#3F51B5</color>   <!-- th.ContrastBg -->
+    <color name="colorMoreContrastBackground">#214096</color>   <!-- th.ContrastBg -->
+    <color name="colorContrastForeground">#FFFFFF</color>   <!-- th.ContrastFg -->
+    <color name="colorDangerous">#E53935</color>            <!-- createDangerousTheme -->
+    <color name="colorHeaderBackground">#000000</color>     <!-- createHeaderTheme -->
+    <color name="colorHeaderForeground">#FFFFFF</color>     <!-- createHeaderTheme -->
+    <color name="colorQuietText">#BABABA</color>            <!-- createQuietTheme -->
+    <color name="colorInputBackground">#343434</color>      <!-- createInputTheme -->
+    <color name="colorInputForeground">#FFFFFF</color>      <!-- createInputTheme -->
+    <color name="colorMessageBackground">#343434</color>    <!-- createMessageTheme -->
+    <color name="colorMessageForeground">#FFFFFF</color>    <!-- createMessageTheme -->
+    <color name="colorMessageInteractive">#3F51B5
+    </color>    <!-- ссылки, интерактив (contrastFg в Message) -->
+    <color name="colorSidebarBackground">#1A1A1A</color>    <!-- createSideBarTheme -->
+    <color name="colorUserBarBackground">#202024</color>    <!-- UserBarColor -->
+
+    <!-- Дополнительные цвета -->
+    <color name="colorBlack">#000000</color>                <!-- ColorBlack -->
+    <color name="colorGreen">#008B00</color>                <!-- ColorGreen -->
+    <color name="colorAlizarin">#E32636</color>             <!-- ColorAlizarin -->
+    <color name="colorUserBarDivider">#B3B3B3</color>       <!-- UserBarDivider -->
+
+    <color name="mtrl_textinput_default_box_stroke_color" tools:override="true">
+        @color/colorQuietText
+    </color>
+
 </resources>

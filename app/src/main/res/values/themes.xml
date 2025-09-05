@@ -1,22 +1,99 @@
 <resources>
     <!-- Base application theme. -->
     <style name="Theme.Oma" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+        <!-- Primary brand color. Используем ContrastBg из Go темы -->
+        <item name="colorPrimary">@color/colorContrastBackground</item>
+        <item name="colorOnPrimary">@color/colorMoreContrastBackground</item>
+        <item name="colorAccent">@color/colorContrastBackground</item>
+
+        <!-- Secondary brand color. Подберите под ваш дизайн. Например, возьмём зеленый из Go темы -->
+        <item name="colorSecondary">@color/colorGreen</item>
+        <item name="colorSecondaryVariant">@color/colorGreen</item>
+        <item name="colorOnSecondary">@color/colorBlack</item>
+
+        <!-- Status bar цвет, чтобы статус бар совпадал с primary variant -->
+        <item name="android:statusBarColor">?attr/colorOnPrimary</item>
+
+        <!-- Фоновый цвет основного окна -->
+        <item name="android:windowBackground">@color/colorBackgroundDark</item>
+
+        <!-- Цвет текста по умолчанию -->
+        <item name="android:textColorPrimary">@color/colorForegroundLight</item>
+        <item name="android:textColor">@color/colorForegroundLight</item>
+        <item name="android:textColorHint">@color/colorQuietText</item>
+
+        <item name="colorControlNormal">@color/colorMoreBackgroundDark</item>
+        <item name="android:navigationBarColor">@color/colorMoreBackgroundDark</item>
+
+    </style>
+
+    <style name="Widget.Oma.EditText" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="android:textColorHint">@color/colorQuietText</item>
+        <item name="boxStrokeColor">@color/colorQuietText</item>
+        <item name="android:textColorPrimary">@color/colorForegroundLight</item>
+        <item name="android:textColor">@color/colorForegroundLight</item>
+        <item name="errorTextColor">@color/colorDangerous</item>
+        <item name="hintTextColor">@color/colorQuietText</item>
+    </style>
+
+    <style name="Theme.Oma.Dark" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:colorBackground">@color/colorBackgroundDark</item>
+        <item name="android:textColor">@color/colorForegroundLight</item>
+        <item name="colorPrimary">@color/colorContrastBackground</item>
+        <item name="colorOnPrimary">@color/colorContrastForeground</item>
+        <item name="colorAccent">@color/colorContrastBackground</item>
+    </style>
+
+    <style name="Theme.Oma.Dangerous" parent="Theme.Oma.Dark">
+        <item name="colorPrimary">@color/colorDangerous</item>
+        <item name="colorAccent">@color/colorDangerous</item>
+    </style>
+
+    <style name="Theme.Oma.Quiet" parent="Theme.Oma.Dark">
+        <item name="android:textColor">@color/colorQuietText</item>
+    </style>
+
+    <style name="Theme.Oma.Input" parent="Theme.Oma.Dark">
+        <item name="android:colorBackground">@color/colorInputBackground</item>
+        <item name="android:textColor">@color/colorInputForeground</item>
+    </style>
+
+
+    <style name="Theme.Oma.Message" parent="Theme.Oma.Dark">
+        <item name="android:colorBackground">@color/colorMessageBackground</item>
+        <item name="android:textColor">@color/colorMessageForeground</item>
+        <item name="colorAccent">@color/colorMessageInteractive</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="Theme.Oma.SideBar" parent="Theme.Oma.Dark">
+        <item name="android:colorBackground">@color/colorSidebarBackground</item>
+        <item name="android:textColor">@color/colorForegroundLight</item>
+    </style>
+
+    <style name="Theme.Oma.UserBar" parent="Theme.Oma.SideBar">
+        <item name="android:colorBackground">@color/colorUserBarBackground</item>
     </style>
 
     <style name="Theme.Oma.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/icon_background</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/icon_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Oma</item>
+    </style>
+
+    <style name="Theme_Oma_Dialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+        <item name="colorPrimary">@color/colorContrastBackground</item>
+        <item name="colorOnPrimary">@color/colorMoreContrastBackground</item>
+        <item name="colorAccent">@color/colorContrastBackground</item>
+        <item name="colorSecondary">@color/colorGreen</item>
+        <item name="colorSecondaryVariant">@color/colorGreen</item>
+        <item name="colorOnSecondary">@color/colorBlack</item>
+        <item name="android:statusBarColor">?attr/colorOnPrimary</item>
+        <item name="android:windowBackground">@color/colorBackgroundDark</item>
+        <item name="android:textColorPrimary">@color/colorForegroundLight</item>
+        <item name="android:textColor">@color/colorForegroundLight</item>
+        <item name="android:textColorHint">@color/colorQuietText</item>
+        <item name="colorControlNormal">@color/colorMoreBackgroundDark</item>
+        <item name="android:navigationBarColor">@color/colorMoreBackgroundDark</item>
     </style>
 </resources>
