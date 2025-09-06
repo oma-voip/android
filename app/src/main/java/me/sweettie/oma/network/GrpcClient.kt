@@ -1,5 +1,6 @@
 package me.sweettie.oma.network
 
+import com.google.protobuf.Empty
 import io.grpc.Channel
 import io.grpc.ClientInterceptors
 import io.grpc.ManagedChannel
@@ -119,6 +120,59 @@ object GrpcClient {
             b = true
         }
         onComplete.invoke(b)
+    }
+
+    suspend fun getServers(): OmaOuterClass.GetSpacesResponse? {
+        return try {
+            withContext(Dispatchers.IO) {
+                stub.getSpaces(Empty.getDefaultInstance())
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun getChannels(id: String): OmaOuterClass.GetChannelsResponse? {
+        return try {
+            val request = OmaOuterClass.GetChannelsRequest.newBuilder()
+                .setSpaceId(id)
+                .build()
+
+            withContext(Dispatchers.IO) {
+                stub.getChannels(request)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun getChannel(sid: String, id: String): OmaOuterClass.Channel? {
+        return try {
+            val request = OmaOuterClass.GetChannelRequest.newBuilder()
+                .setSpaceId(sid)
+                .setId(id)
+                .build()
+
+            withContext(Dispatchers.IO) {
+                stub.getChannel(request)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun getSpace(id: String): OmaOuterClass.GetSpaceResponse? {
+        return try {
+            val request = OmaOuterClass.GetSpaceRequest.newBuilder()
+                .setId(id)
+                .build()
+
+            withContext(Dispatchers.IO) {
+                stub.getSpace(request)
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
 

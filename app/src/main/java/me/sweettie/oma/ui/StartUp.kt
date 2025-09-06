@@ -6,6 +6,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import me.sweettie.oma.R
+import me.sweettie.oma.data.Server
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.login.LoginActivity
 import me.sweettie.oma.ui.main.MainActivity
@@ -37,6 +38,19 @@ class StartUp : AppCompatActivity() {
                     val user = GrpcClient.getUser("me")
                     if (user != null) {
                         SessionManager.currentUser = user
+
+                        val t = GrpcClient.getServers()
+                        if (t == null) {
+                            return@launch
+                        }
+                        val servers = mutableListOf<Server>()
+                        println("Init servers: ${t.spacesList.size}")
+                        t.spacesList.forEach {
+
+                            servers.add(Server(it))
+                        }
+                        SessionManager.servers = servers
+
                         keepSplash = false
                         Utils.openActivity(this@StartUp, MainActivity::class.java)
                         return@launch

@@ -1,42 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.home.HomeFragment">
 
+    <androidx.recyclerview.widget.RecyclerView
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:id="@+id/rv_servers"
+        app:layout_constraintLeft_toLeftOf="parent"
+        tools:listitem="@layout/item_server" />
+
+    <com.google.android.material.divider.MaterialDivider
+        android:id="@+id/divider"
+        android:layout_width="@dimen/divider"
+        android:layout_height="match_parent"
+        app:layout_constraintLeft_toRightOf="@id/rv_servers"
+        android:orientation="vertical" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:id="@+id/channel_menu"
+        app:layout_constraintLeft_toRightOf="@id/divider"
+        app:layout_constraintRight_toRightOf="parent"
+        android:padding="@dimen/def_padding">
 
         <TextView
-            android:id="@+id/textView"
-            android:layout_width="wrap_content"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
+            android:textAlignment="center"
+            android:textSize="22sp"
+            android:padding="@dimen/def_padding"
+            android:id="@+id/server_name" />
 
-            android:text="username:"
-            android:textSize="18sp"
+        <com.google.android.material.divider.MaterialDivider
+            android:layout_width="match_parent"
+            android:id="@+id/divider2"
+            android:layout_height="@dimen/divider"
+            app:layout_constraintTop_toBottomOf="@id/server_name"
+            android:layout_marginTop="@dimen/def_padding" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            app:layout_constraintTop_toBottomOf="@id/divider2"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:id="@+id/server_channels"
+            tools:listitem="@layout/item_channel"
 
-        <TextView
-            android:id="@+id/username"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-
-            android:text="asdsad"
-            android:textSize="18sp"
-            android:layout_marginStart="10dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@id/textView"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintLeft_toLeftOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 
-</FrameLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

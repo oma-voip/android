@@ -23,4 +23,5 @@
     <string name="register_account_issue">The account is either registered or awaiting email confirmation.</string>
     <string name="close">Close</string>
     <string name="confirm_email">conf. email</string>
+    <string name="text_channel_icon">text channel icon</string>
 </resources>

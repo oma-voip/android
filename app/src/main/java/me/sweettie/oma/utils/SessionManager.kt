@@ -1,6 +1,8 @@
 package me.sweettie.oma.utils
 
+import me.sweettie.oma.data.Server
 import proto.OmaOuterClass
+import java.util.*
 
 enum class SessionState {
     NULL,
@@ -15,6 +17,7 @@ object SessionManager {
     var token: String? = null
     var currentUser: OmaOuterClass.User? = null
     var currentState: SessionState = SessionState.NULL
+    var servers: List<Server> = Collections.emptyList()
 
     fun loadState() {
         val state = SecurePrefs.sf.getString("state", "CEMAIL")!!

@@ -1,23 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.main.MainActivity">
 
-    <TextView
-        android:layout_width="match_parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_height="wrap_content"
-        android:text="test text of main Layout"/>
 
     <androidx.fragment.app.FragmentContainerView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:id="@+id/fragment_container"
-        android:name="me.sweettie.oma.ui.home.HomeFragment"
-        tools:layout="@layout/fragment_home">
-    </androidx.fragment.app.FragmentContainerView>
+        android:id="@+id/fragment_container"></androidx.fragment.app.FragmentContainerView>
+
+    <!--    <FrameLayout-->
+    <!--        android:layout_width="50dp"-->
+    <!--        android:layout_height="match_parent"-->
+    <!--        android:layout_gravity="end"-->
+
+    <!--        android:background="@android:color/transparent" />-->
 
 </androidx.constraintlayout.widget.ConstraintLayout>

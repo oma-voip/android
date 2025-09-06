@@ -28,6 +28,7 @@
     <color name="colorSidebarBackground">#1A1A1A</color>    <!-- createSideBarTheme -->
     <color name="colorUserBarBackground">#202024</color>    <!-- UserBarColor -->
 
+    <color name="divider">#3AFFFFFF</color>
     <!-- Дополнительные цвета -->
     <color name="colorBlack">#000000</color>                <!-- ColorBlack -->
     <color name="colorGreen">#008B00</color>                <!-- ColorGreen -->
@@ -36,6 +37,10 @@
 
     <color name="mtrl_textinput_default_box_stroke_color" tools:override="true">
         @color/colorQuietText
+    </color>
+
+    <color name="material_divider_color" tools:override="true">
+        @color/divider
     </color>
 
 </resources>

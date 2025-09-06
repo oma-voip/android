@@ -7,7 +7,7 @@ import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.databinding.ActivityLoginBinding
 import me.sweettie.oma.network.GrpcClient
-import me.sweettie.oma.ui.main.MainActivity
+import me.sweettie.oma.ui.StartUp
 import me.sweettie.oma.ui.register.RegisterActivity
 import me.sweettie.oma.utils.*
 
@@ -61,8 +61,7 @@ class LoginActivity : AppCompatActivity() {
                     SessionManager.token = it.token
                     SecurePrefs.save("token", SessionManager.token)
                     lifecycleScope.launch {
-                        SessionManager.currentUser = GrpcClient.getUser("me")
-                        Utils.openActivity(this@LoginActivity, MainActivity::class.java)
+                        Utils.openActivity(this@LoginActivity, StartUp::class.java)
                     }
                 },
                 onError = {

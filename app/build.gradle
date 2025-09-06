@@ -55,6 +55,10 @@ dependencies {
     implementation 'com.google.android.material:material:1.9.0'
     //noinspection GradleDependency
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    //noinspection GradleDependency
+    implementation "androidx.navigation:navigation-fragment-ktx:2.7.7"
+    //noinspection GradleDependency
+    implementation "androidx.navigation:navigation-ui:2.7.7"
     testImplementation 'junit:junit:4.13.2'
     //noinspection GradleDependency
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

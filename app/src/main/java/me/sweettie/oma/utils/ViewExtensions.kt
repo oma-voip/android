@@ -3,6 +3,10 @@ package me.sweettie.oma.utils
 import android.text.Editable
 import android.text.TextWatcher
 import android.widget.EditText
+import android.widget.TextView
+import androidx.annotation.ColorInt
+import androidx.annotation.DrawableRes
+import androidx.core.content.ContextCompat
 
 
 fun EditText.onTextUpdate(afterTextChanged: (String) -> Unit) {
@@ -35,4 +39,10 @@ fun EditText.getEndText(): String {
 
 fun Editable?.isPresent(): Boolean {
     return !(this.isNullOrBlank() || this.isEmpty())
+}
+
+fun TextView.setStartDrawable(@DrawableRes drawableRes: Int, @ColorInt tintColor: Int) {
+    val drawable = ContextCompat.getDrawable(context, drawableRes)?.mutate()
+    drawable?.setTint(tintColor)
+    setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, null, null)
 }
