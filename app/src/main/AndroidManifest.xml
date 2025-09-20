@@ -46,15 +46,19 @@
                 android:value="" />
         </activity>
         <activity
+            android:theme="@style/Theme.Oma"
             android:name=".ui.main.MainActivity"
             android:exported="true" />
         <activity
+            android:theme="@style/Theme.Oma"
             android:name=".ui.login.LoginActivity"
             android:exported="true" />
         <activity
+            android:theme="@style/Theme.Oma"
             android:name=".ui.register.RegisterActivity"
             android:exported="true" />
         <activity
+            android:theme="@style/Theme.Oma"
             android:name=".ui.register.ConfirmEmailActivity"
             android:exported="true" />
     </application>
