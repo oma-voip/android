@@ -2,6 +2,7 @@ package me.sweettie.oma.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import java.util.*
 
 object SecurePrefs {
 
@@ -11,6 +12,15 @@ object SecurePrefs {
 
     fun init(context: Context) {
         sf = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val t = sf.getString("uuid", null)
+        if (t == null) {
+            val uuid = UUID.randomUUID()
+            save("uuid", uuid.toString())
+            SessionManager.uuid = uuid
+        } else {
+            SessionManager.uuid = UUID.fromString(t)
+        }
+
     }
 
     inline fun <reified T> save(key: String, value: T) {

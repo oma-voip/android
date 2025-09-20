@@ -1,25 +1,138 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/holo_red_dark"
+    android:orientation="vertical"
+    android:background="@color/colorBackgroundDark"
     tools:context=".ui.chat.ChatFragment">
+
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:background="@color/colorBackgroundDark"
+        app:layout_constraintTop_toTopOf="parent"
+        android:id="@+id/action_bar_"
+        android:orientation="horizontal"
+        android:layout_height="?android:attr/actionBarSize">
+
+        <ImageButton
+            android:id="@+id/back_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:minWidth="42dp"
+            android:src="@drawable/ic_back"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:tint="@color/white"
+            tools:ignore="SpeakableTextPresentCheck"
+            android:contentDescription="@string/back" />
 
         <TextView
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="fragment chat"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:layout_height="match_parent"
+            app:layout_constraintLeft_toRightOf="@id/back_btn"
+            android:textAlignment="gravity"
+            android:paddingStart="@dimen/x3_def_padding"
+            android:paddingEnd="@dimen/x2_def_padding"
+            android:textStyle="bold"
+            android:textSize="20sp"
+            android:id="@+id/channel_name"
+            android:gravity="center_vertical" />
 
+        <ImageButton
+            android:id="@+id/option_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:background="@android:color/transparent"
+            android:minWidth="42dp"
+            app:tint="@color/white"
+            android:src="@drawable/ic_dots"
+            tools:ignore="SpeakableTextPresentCheck"
+            android:contentDescription="@string/channel_option" />
+
+        <com.google.android.material.divider.MaterialDivider
+            android:layout_width="match_parent"
+            android:padding="0dp"
+            android:layout_margin="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-</FrameLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/list_messages"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:paddingLeft="@dimen/x2_def_padding"
+        android:paddingRight="@dimen/x2_def_padding"
+        android:paddingTop="@dimen/x2_def_padding"
+        app:layout_constraintTop_toBottomOf="@id/action_bar_"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:listitem="@layout/chat_message"
+        android:clipToPadding="false"
+        android:paddingBottom="70dp">
+
+
+    </androidx.recyclerview.widget.RecyclerView>
+
+    <LinearLayout
+        android:id="@+id/layout_send_message"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="match_parent"
+        android:orientation="horizontal"
+        android:padding="@dimen/x2_def_padding"
+        android:background="@drawable/bg_gradient"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Oma.SendMessageBar"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:hintEnabled="false"
+            android:maxLines="1">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/message_box"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="4"
+                android:hint="@string/message" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Space
+            android:layout_width="@dimen/def_padding"
+            android:layout_height="1dp" />
+
+        <ImageButton
+            android:id="@+id/attachment_btn"
+            android:layout_width="55dp"
+            android:layout_height="55dp"
+            android:layout_gravity="center_vertical"
+            android:background="@drawable/bg_btn"
+            android:src="@drawable/ic_attachment_file"
+            app:tint="@color/white"
+            android:contentDescription="@string/add_attachment" />
+
+        <Space
+            android:layout_width="@dimen/def_padding"
+            android:layout_height="1dp" />
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/send_btn"
+            android:layout_width="55dp"
+            android:layout_height="55dp"
+            android:layout_gravity="center_vertical"
+            android:background="@drawable/bg_btn"
+            android:src="@drawable/ic_send"
+            app:tint="@color/white"
+            android:contentDescription="@string/add_attachment" />
+
+    </LinearLayout>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

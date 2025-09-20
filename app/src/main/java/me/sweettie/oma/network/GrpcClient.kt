@@ -5,10 +5,16 @@ import io.grpc.Channel
 import io.grpc.ClientInterceptors
 import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import io.grpc.stub.StreamObserver
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import proto.OmaGrpc
 import proto.OmaOuterClass
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 object GrpcClient {
 
@@ -20,7 +26,40 @@ object GrpcClient {
     private val ic: Channel = ClientInterceptors.intercept(channel, AuthInterceptor())
 
     private val stub = OmaGrpc.newBlockingStub(ic)
+    private val eventStub = OmaGrpc.newStub(ic)
 
+    fun subscribeToEvents(): Flow<OmaOuterClass.Event> = callbackFlow {
+        val request = Empty.getDefaultInstance()
+        val streamObserver = object : StreamObserver<OmaOuterClass.Event> {
+            override fun onNext(value: OmaOuterClass.Event) {
+                trySend(value) // Отправляем событие в Flow
+            }
+
+            override fun onError(t: Throwable) {
+                close(t) // Закрываем канал с ошибкой
+            }
+
+            override fun onCompleted() {
+                close() // Сервер закрыл стрим
+            }
+        }
+        eventStub.subscribe(request, streamObserver)
+        awaitClose {
+        }
+    }
+
+
+    suspend fun registerFbToken(token: String) {
+        try {
+            val req = OmaOuterClass.RegisterDeviceRequest.newBuilder()
+                .setToken(token)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.registerDevice(req)
+            }
+        } catch (_: Exception) {
+        }
+    }
 
     suspend fun register(
         username: String,
@@ -40,6 +79,57 @@ object GrpcClient {
                 stub.register(req)
             }
             onSuccess()
+        } catch (e: Exception) {
+            onError(e)
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    suspend fun downloadChunks(attachId: String): Iterator<OmaOuterClass.FileChunk> =
+        suspendCoroutine { cont ->
+            GlobalScope.launch {
+                try {
+                    getAttachment(
+                        attachId,
+                        onSuccess = { iterator -> cont.resume(iterator) },
+                        onError = { e -> cont.resumeWithException(e) }
+                    )
+                } catch (e: Exception) {
+                    cont.resumeWithException(e)
+                }
+            }
+        }
+
+    suspend fun getAttachment(
+        attachId: String, onSuccess: (Iterator<OmaOuterClass.FileChunk>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        try {
+            val req = OmaOuterClass.DownloadRequest.newBuilder()
+                .setId(attachId)
+                .build()
+            onSuccess(withContext(Dispatchers.IO) {
+                stub.download(req)
+            })
+        } catch (e: Exception) {
+            onError(e)
+        }
+    }
+
+    suspend fun getMessages(
+        spaceId: String,
+        chatId: String, offset: Long, onSuccess: (OmaOuterClass.GetMessagesResponse) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        try {
+            val req = OmaOuterClass.GetMessagesRequest.newBuilder()
+                .setSpaceId(spaceId)
+                .setChannelId(chatId)
+                .setOffset(offset)
+                .build()
+            onSuccess(withContext(Dispatchers.IO) {
+                stub.getMessages(req)
+            })
         } catch (e: Exception) {
             onError(e)
         }
@@ -172,6 +262,20 @@ object GrpcClient {
             }
         } catch (e: Exception) {
             null
+        }
+    }
+
+    suspend fun sendMessage(serverId: String, channelId: String, message: String) {
+        try {
+            val req = OmaOuterClass.SendMessageRequest.newBuilder()
+                .setSpaceId(serverId)
+                .setChannelId(channelId)
+                .setText(message)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.sendMessage(req)
+            }
+        } catch (_: Exception) {
         }
     }
 

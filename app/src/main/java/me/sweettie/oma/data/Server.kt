@@ -2,18 +2,33 @@ package me.sweettie.oma.data
 
 import me.sweettie.oma.network.GrpcClient
 import proto.OmaOuterClass
+import proto.OmaOuterClass.Space
 import java.util.*
 
 class Server(
-    val space: OmaOuterClass.Space,
+    val space: Space,
     var channels: List<OmaOuterClass.Channel> = Collections.emptyList()
 ) {
+
+    val hashChannels: HashMap<String, OmaOuterClass.Channel> = HashMap()
+
     lateinit var members: List<OmaOuterClass.User>
     suspend fun loadAllNecessaryInfo() {
         val r = GrpcClient.getSpace(space.id) ?: return
         members = r.membersList
         val t = GrpcClient.getChannels(space.id) ?: return
         channels = t.channelsList
+        updateHash()
+    }
 
+    private fun updateHash() {
+        hashChannels.clear()
+        channels.forEach {
+            hashChannels[it.id] = it
+        }
+    }
+
+    init {
+        updateHash()
     }
 }

@@ -1,5 +1,8 @@
 package me.sweettie.oma.ui
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -12,10 +15,7 @@ import me.sweettie.oma.ui.login.LoginActivity
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.register.ConfirmEmailActivity
 import me.sweettie.oma.ui.register.RegisterActivity
-import me.sweettie.oma.utils.SecurePrefs
-import me.sweettie.oma.utils.SessionManager
-import me.sweettie.oma.utils.SessionState
-import me.sweettie.oma.utils.Utils
+import me.sweettie.oma.utils.*
 
 class StartUp : AppCompatActivity() {
 
@@ -26,9 +26,13 @@ class StartUp : AppCompatActivity() {
         splash.setKeepOnScreenCondition { keepSplash }
 
         super.onCreate(savedInstanceState)
+
+        createNotificationChannel()
+
         setContentView(R.layout.start_up)
         SecurePrefs.init(this)
         SessionManager.loadState()
+        SessionManager.cacheManager = AttachmentCacheManager(this, GrpcClient::downloadChunks)
         lifecycleScope.launch {
             try {
                 val token: String? = SecurePrefs.sf.getString("token", null)
@@ -73,5 +77,17 @@ class StartUp : AppCompatActivity() {
                 e.printStackTrace()
             }
         }
+    }
+
+    private fun createNotificationChannel() {
+        val channelId = getString(R.string.oma_notification_channel)
+        val channelName = "Default Oma Notification Channel"
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val channel = NotificationChannel(channelId, channelName, importance).apply {
+            description = "Channel for default notifications"
+        }
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
     }
 }

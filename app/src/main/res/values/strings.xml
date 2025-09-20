@@ -24,4 +24,16 @@
     <string name="close">Close</string>
     <string name="confirm_email">conf. email</string>
     <string name="text_channel_icon">text channel icon</string>
+    <string name="message">Message...</string>
+    <string name="add_attachment">add attachment</string>
+    <string name="message_image_attachment">Message image attachment</string>
+    <string name="channel_option">channel option</string>
+    <string name="back">back</string>
+    <string name="space_id">Space ID</string>
+    <string name="space_name">Space Name</string>
+    <string name="join">Join</string>
+    <string name="create">Create</string>
+    <string name="create_space"><u>Create Space</u></string>
+    <string name="join_space"><u>Join Space</u></string>
+    <string name="oma_notification_channel">oma_notification_channel</string>
 </resources>

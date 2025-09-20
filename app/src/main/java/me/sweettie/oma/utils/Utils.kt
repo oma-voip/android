@@ -3,6 +3,7 @@ package me.sweettie.oma.utils
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import me.sweettie.oma.R
 
@@ -37,4 +38,17 @@ object Utils {
             .show()
     }
 
+    fun animateTextChange(textView: TextView, newText: String) {
+        textView.animate()
+            .alpha(0f)
+            .setDuration(150)
+            .withEndAction {
+                textView.text = newText
+                textView.animate()
+                    .alpha(1f)
+                    .setDuration(150)
+                    .start()
+            }
+            .start()
+    }
 }

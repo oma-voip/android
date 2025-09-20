@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="divider">1dp</dimen>
+    <dimen name="x0.5_def_padding">2dp</dimen>
     <dimen name="def_padding">4dp</dimen>
+    <dimen name="x2_def_padding">8dp</dimen>
+    <dimen name="x3_def_padding">16dp</dimen>
+    <dimen name="status_bar_height">48dp</dimen>  <!-- from sources -->
 </resources>

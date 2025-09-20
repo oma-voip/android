@@ -77,10 +77,8 @@ class RegisterActivity : AppCompatActivity() {
         lifecycleScope.launch {
             GrpcClient.register(t1, t2, t3,
                 onSuccess = {
-                    lifecycleScope.launch {
-                        SecurePrefs.save("email", t3)
-                        Utils.openActivity(this@RegisterActivity, ConfirmEmailActivity::class.java)
-                    }
+                    SecurePrefs.save("email", t3)
+                    Utils.openActivity(this@RegisterActivity, ConfirmEmailActivity::class.java)
                 }
             ) {
                 Utils.showConfirmationDialog(this@RegisterActivity,
@@ -90,12 +88,11 @@ class RegisterActivity : AppCompatActivity() {
                     {
                         lifecycleScope.launch {
                             GrpcClient.resendCode(t3) {
-                                lifecycleScope.launch {
-                                    Utils.openActivity(
-                                        this@RegisterActivity,
-                                        ConfirmEmailActivity::class.java
-                                    )
-                                }
+                                Utils.openActivity(
+                                    this@RegisterActivity,
+                                    ConfirmEmailActivity::class.java
+                                )
+
                             }
                         }
 

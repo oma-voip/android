@@ -3,14 +3,24 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:padding="4dp">
+
+    <com.devrj.superellipse.SuperEllipseImageView
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_gravity="center"
+        android:id="@+id/tv_server_ellipse"
+        app:shapeBackgroundColor="@color/colorContrastBackground"
+        app:shapeBorderWidth="0dp"
+
+        android:gravity="center" />
 
     <TextView
         android:id="@+id/tv_server_letter"
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:layout_gravity="center"
-        android:background="@drawable/bg_circle_server"
         android:gravity="center"
         android:textSize="18sp"
         android:textStyle="bold"

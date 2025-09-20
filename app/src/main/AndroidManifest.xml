@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
-
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -15,10 +15,26 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Oma"
         tools:targetApi="33">
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/oma_notification_channel" />
+
+        <service
+            android:name=".network.firebase.FBService"
+            android:enabled="true"
+            android:exported="false">
+
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+
+        </service>
+
         <activity
-            android:theme="@style/Theme.Oma.Splash"
             android:name=".ui.StartUp"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.Oma.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

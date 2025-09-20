@@ -19,6 +19,14 @@
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
 
+        <action
+            android:id="@+id/action_main_to_joincreate_space"
+            app:destination="@id/createSpaceFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
     </fragment>
 
     <fragment
@@ -35,12 +43,41 @@
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
 
+        <argument
+            android:name="channelId"
+            app:argType="string"
+            app:nullable="false" />
+
+        <argument
+            android:name="serverId"
+            app:argType="string"
+            app:nullable="false" />
+
     </fragment>
 
     <fragment
         android:id="@+id/membersFragment"
         android:name="me.sweettie.oma.ui.members.MembersFragment"
         android:label="Members"
-        tools:layout="@layout/fragment_members" />
+        tools:layout="@layout/fragment_members">
+
+
+        <argument
+            android:name="channelId"
+            app:argType="string"
+            app:nullable="false" />
+
+        <argument
+            android:name="serverId"
+            app:argType="string"
+            app:nullable="false" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/createSpaceFragment"
+        android:name="me.sweettie.oma.ui.joincreatespace.JoinCreateSpaceFragment"
+        android:label="join/create Space"
+        tools:layout="@layout/fragment_joincreatespace"></fragment>
 
 </navigation>

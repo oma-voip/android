@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "717886278317",
+    "project_id": "oma-voip",
+    "storage_bucket": "oma-voip.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:717886278317:android:bdb5d1fbe7741fd1271424",
+        "android_client_info": {
+          "package_name": "me.sweettie.oma"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCU2ATljfkIV-zhzUsukyxjuMvZp0NMEvA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

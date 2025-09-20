@@ -13,6 +13,7 @@
     <color name="colorMoreBackgroundDark">#131313</color>       <!-- th.Bg в createDarkTheme -->
     <color name="colorForegroundLight">#FFFFFF</color>     <!-- th.Fg в createDarkTheme -->
     <color name="colorContrastBackground">#3F51B5</color>   <!-- th.ContrastBg -->
+    <color name="colorContrastBackgroundSelected">#5766be</color>   <!-- th.ContrastBg -->
     <color name="colorMoreContrastBackground">#214096</color>   <!-- th.ContrastBg -->
     <color name="colorContrastForeground">#FFFFFF</color>   <!-- th.ContrastFg -->
     <color name="colorDangerous">#E53935</color>            <!-- createDangerousTheme -->
@@ -26,6 +27,7 @@
     <color name="colorMessageInteractive">#3F51B5
     </color>    <!-- ссылки, интерактив (contrastFg в Message) -->
     <color name="colorSidebarBackground">#1A1A1A</color>    <!-- createSideBarTheme -->
+    <color name="morecolorSidebarBackground">#1A1A1A</color>    <!-- createSideBarTheme -->
     <color name="colorUserBarBackground">#202024</color>    <!-- UserBarColor -->
 
     <color name="divider">#3AFFFFFF</color>
@@ -34,6 +36,8 @@
     <color name="colorGreen">#008B00</color>                <!-- ColorGreen -->
     <color name="colorAlizarin">#E32636</color>             <!-- ColorAlizarin -->
     <color name="colorUserBarDivider">#B3B3B3</color>       <!-- UserBarDivider -->
+
+    <color name="transparent">@android:color/transparent</color>
 
     <color name="mtrl_textinput_default_box_stroke_color" tools:override="true">
         @color/colorQuietText

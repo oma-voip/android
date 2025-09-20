@@ -8,6 +8,8 @@ class AuthInterceptor : ClientInterceptor {
     companion object {
         val TOKEN_KEY: Metadata.Key<String> =
             Metadata.Key.of("token", Metadata.ASCII_STRING_MARSHALLER)
+        val UUID_KEY: Metadata.Key<String> =
+            Metadata.Key.of("client-id", Metadata.ASCII_STRING_MARSHALLER)
     }
 
     override fun <ReqT, RespT> interceptCall(
@@ -22,6 +24,7 @@ class AuthInterceptor : ClientInterceptor {
                 if (SessionManager.token != null) {
                     headers.put(TOKEN_KEY, SessionManager.token)
                 }
+                headers.put(UUID_KEY, SessionManager.uuid.toString())
                 super.start(responseListener, headers)
             }
         }

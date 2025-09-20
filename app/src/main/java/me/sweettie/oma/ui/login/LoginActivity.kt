@@ -1,6 +1,7 @@
 package me.sweettie.oma.ui.login
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -65,8 +66,13 @@ class LoginActivity : AppCompatActivity() {
                     }
                 },
                 onError = {
+                    if (it.message.equals("UNAVAILABLE"))
+                        Toast.makeText(
+                            this@LoginActivity,
+                            "Server busy...try later",
+                            Toast.LENGTH_LONG
+                        ).show()
                     it.printStackTrace()
-                    println(it.message)
                 }
             )
         }
