@@ -6,10 +6,14 @@ import io.grpc.ClientInterceptors
 import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
-import kotlinx.coroutines.*
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import proto.OmaGrpc
 import proto.OmaOuterClass
 import kotlin.coroutines.resume
@@ -265,6 +269,19 @@ object GrpcClient {
         }
     }
 
+    suspend fun getVoiceRequest(serverId: String, channelId: String) {
+        try {
+            val req = OmaOuterClass.RequestVoiceRelayRequest.newBuilder()
+                .setSpaceId(serverId)
+                .setChannelId(channelId)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.requestVoiceRelay(req)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
     suspend fun sendMessage(serverId: String, channelId: String, message: String) {
         try {
             val req = OmaOuterClass.SendMessageRequest.newBuilder()
@@ -274,6 +291,30 @@ object GrpcClient {
                 .build()
             withContext(Dispatchers.IO) {
                 stub.sendMessage(req)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    suspend fun joinSpace(spaceId: String) {
+        try {
+            val req = OmaOuterClass.JoinSpaceRequest.newBuilder()
+                .setId(spaceId)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.joinSpace(req)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    suspend fun createSpace(spaceName: String) {
+        try {
+            val req = OmaOuterClass.CreateSpaceRequest.newBuilder()
+                .setName(spaceName)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.createSpace(req)
             }
         } catch (_: Exception) {
         }

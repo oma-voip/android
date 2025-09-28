@@ -18,6 +18,7 @@ import androidx.core.view.GestureDetectorCompat
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,18 +52,6 @@ class MainActivity : AppCompatActivity() {
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE)
         supportActionBar?.hide()
 
-        FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
-            if (!task.isSuccessful) {
-                Log.w("OMA", "Fetching FCM registration token failed", task.exception)
-                return@OnCompleteListener
-            }
-
-            val token = task.result
-            println("New token = ${token}")
-            CoroutineScope(Dispatchers.IO).launch {
-                GrpcClient.registerFbToken(token)
-            }
-        })
 
         val typedValue = TypedValue()
         val found = theme.resolveAttribute(attr.windowBackground, typedValue, true)
@@ -78,12 +67,32 @@ class MainActivity : AppCompatActivity() {
         window.navigationBarColor = color
 
         super.onCreate(savedInstanceState)
+        try {
+            FirebaseApp.getInstance()
+        } catch (e: IllegalStateException) {
+            FirebaseApp.initializeApp(this)
+        }
+
         setContentView(R.layout.activity_main)
+
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w("OMA", "Fetching FCM registration token failed", task.exception)
+                return@OnCompleteListener
+            }
+
+            val token = task.result
+            println("New token = ${token}")
+            CoroutineScope(Dispatchers.IO).launch {
+                GrpcClient.registerFbToken(token)
+            }
+        })
+
         SessionManager.saveState(SessionState.MAIN)
         window?.apply {
             statusBarColor = Color.TRANSPARENT
         }
-
         navController =
             (supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment).navController
 

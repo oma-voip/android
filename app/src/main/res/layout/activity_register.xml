@@ -6,11 +6,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    android:theme="@style/Theme.Oma"
     tools:context=".ui.register.RegisterActivity">
 
     <com.google.android.material.textfield.TextInputLayout
-        style="@style/Widget.Oma.EditText"
+        style="@style/Widget.Oma.TextInputLayout"
         android:id="@+id/emailLayout"
         app:errorEnabled="true"
         android:layout_width="match_parent"
@@ -21,6 +20,7 @@
         tools:layout_editor_absoluteX="1dp">
 
         <com.google.android.material.textfield.TextInputEditText
+            style="@style/Widget.Oma.TextInputEditText"
             android:id="@+id/email"
             android:selectAllOnFocus="true"
             android:layout_width="match_parent"
@@ -34,7 +34,7 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
-        style="@style/Widget.Oma.EditText"
+        style="@style/Widget.Oma.TextInputLayout"
         android:id="@+id/usernameLayout"
         app:errorEnabled="true"
         android:layout_width="match_parent"
@@ -45,6 +45,7 @@
         tools:layout_editor_absoluteX="1dp">
 
         <com.google.android.material.textfield.TextInputEditText
+            style="@style/Widget.Oma.TextInputEditText"
             android:id="@+id/username"
             android:selectAllOnFocus="true"
             android:layout_width="match_parent"
@@ -57,7 +58,7 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
-        style="@style/Widget.Oma.EditText"
+        style="@style/Widget.Oma.TextInputLayout"
         android:id="@+id/passwordLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -68,6 +69,7 @@
         app:layout_constraintTop_toBottomOf="@+id/usernameLayout">
 
         <com.google.android.material.textfield.TextInputEditText
+            style="@style/Widget.Oma.TextInputEditText"
             android:id="@+id/password"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -82,7 +84,7 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
-        style="@style/Widget.Oma.EditText"
+        style="@style/Widget.Oma.TextInputLayout"
         android:id="@+id/passwordConfirmLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -93,6 +95,7 @@
         app:layout_constraintTop_toBottomOf="@+id/passwordLayout">
 
         <com.google.android.material.textfield.TextInputEditText
+            style="@style/Widget.Oma.TextInputEditText"
             android:id="@+id/passwordConfirm"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

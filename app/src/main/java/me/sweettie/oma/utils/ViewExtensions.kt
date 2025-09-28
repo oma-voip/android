@@ -3,15 +3,18 @@ package me.sweettie.oma.utils
 import android.content.res.Resources
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.View
 import android.widget.EditText
 import android.widget.TextView
 import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import proto.OmaOuterClass
+import java.nio.ByteBuffer
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 
 fun EditText.onTextUpdate(afterTextChanged: (String) -> Unit) {
@@ -91,3 +94,21 @@ fun OmaOuterClass.Attachment.isImage(): Boolean {
 }
 
 fun Int.toPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
+
+fun View.setOposit() {
+    this.visibility = if (this.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+}
+
+fun UUID.toByteArray(size: Int = 16): ByteArray {
+    val buffer = ByteBuffer.allocate(size)
+    buffer.putLong(mostSignificantBits)
+    buffer.putLong(leastSignificantBits)
+    return buffer.array()
+}
+
+fun String.HexToByteArray(): ByteArray {
+    require(length % 2 == 0) { "Hex string must have even length" }
+    return ByteArray(length / 2) { i ->
+        substring(i * 2, i * 2 + 2).toInt(16).toByte()
+    }
+}

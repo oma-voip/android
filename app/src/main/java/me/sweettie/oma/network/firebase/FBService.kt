@@ -63,7 +63,7 @@ class FBService : FirebaseMessagingService() {
                     context,
                     context.getString(R.string.oma_notification_channel)
                 )
-                    .setSmallIcon(R.mipmap.icon)
+                    .setSmallIcon(R.mipmap.svg_icon)
                     .setContentTitle(title)
                     .setContentText(body)
                     .setAutoCancel(true)

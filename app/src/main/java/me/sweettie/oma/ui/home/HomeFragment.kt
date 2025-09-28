@@ -11,10 +11,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.databinding.FragmentHomeBinding
+import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.main.MainViewModel
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.Utils
+import proto.OmaOuterClass
 
 class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
@@ -36,13 +38,11 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
 
-        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
         println("server size: ${SessionManager.servers.size}")
         binding.rvServers.layoutManager = LinearLayoutManager(requireContext())
 
         val serverClickCallback: (Server) -> Unit = { server: Server ->
             println("Выбран сервер: ${server.space.name}")
-//            binding.serverName.text = server.space.name
 
 
             binding.channelMenu.visibility = View.VISIBLE
@@ -68,19 +68,28 @@ class HomeFragment : Fragment() {
         binding.serverChannels.layoutManager = LinearLayoutManager(requireContext())
         binding.serverChannels.adapter = ChannelAdapter(null) { s, c ->
             println("выбран канал: ${c.name}")
-
             val navController = (activity as? MainActivity)?.navController ?: return@ChannelAdapter
-            val action = HomeFragmentDirections.actionHomeToChat(
-                channelId = c.id,
-                serverId = s.space.id
-            )
+            val action = if (c.type.equals(OmaOuterClass.ChannelType.TEXT)) {
+                HomeFragmentDirections.actionHomeToChat(
+                    channelId = c.id,
+                    serverId = s.space.id
+                )
+            } else {
+                HomeFragmentDirections.actionHomeToVoicechat(
+                    channelId = c.id,
+                    serverId = s.space.id
+                )
+            }
             navController.navigate(action)
         }
 
 
         binding.rvServers.adapter = ServerAdapter(serverClickCallback, onAddClick = {
-
+            val navController = (activity as? MainActivity)?.navController ?: return@ServerAdapter
+            val action = HomeFragmentDirections.actionMainToJoincreateSpace()
+            navController.navigate(action)
         })
+
         (binding.rvServers.adapter as ServerAdapter).prepareItems(SessionManager.servers)
 
         if ((binding.rvServers.adapter as ServerAdapter).itemCount >= 1 && SessionManager.selectedServer == null) {
@@ -89,6 +98,87 @@ class HomeFragment : Fragment() {
             serverClickCallback(SessionManager.selectedServer!!)
         }
 
+
+        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.uiState.collect { state ->
+                when (state) {
+                    is MainViewModel.UiState.ServerJoined -> {
+                        if (SessionManager.getServerBySpaceId(state.spaceId) == null) {
+                            val r = GrpcClient.getSpace(state.spaceId) ?: return@collect
+                            SessionManager.servers.add(Server(r.space))
+                            (binding.rvServers.adapter as ServerAdapter).prepareItems(SessionManager.servers)
+                        } else {
+                            SessionManager.getServerBySpaceId(state.spaceId)!!
+                                .loadAllNecessaryInfo()
+                        }
+                    }
+
+                    is MainViewModel.UiState.ChannelCreated -> {
+                        val r = SessionManager.getServerBySpaceId(state.channel.spaceId)
+                            ?: return@collect
+                        if (SessionManager.selectedServer == null)
+                            return@collect
+                        if (SessionManager.selectedServer!!.space.id.equals(r.space.id)) {
+                            println("Try to update server channels!")
+                            lifecycleScope.launch {
+                                r.loadAllNecessaryInfo()
+                                SessionManager.updateServer(r)
+                                (binding.serverChannels.adapter as ChannelAdapter).updateServer(r)
+                            }
+                        }
+
+                    }
+
+                    is MainViewModel.UiState.ChannelMembers -> {
+                        if (SessionManager.selectedServer != null) {
+                            val tempServersIndexed =
+                                SessionManager.selectedServer!!.channels.sortedWith(
+                                    compareBy<OmaOuterClass.Channel> { it.type != OmaOuterClass.ChannelType.TEXT }
+                                        .thenBy { it.name.lowercase() }
+                                )
+                            val index =
+                                tempServersIndexed.indexOf(SessionManager.selectedServer!!.hashChannels[state.channelMembers.channelId])
+                            (binding.serverChannels.adapter as ChannelAdapter).notifyItemChanged(
+                                index
+                            )
+                        }
+                    }
+
+                    is MainViewModel.UiState.ChannelJoined -> {
+                        if (SessionManager.selectedServer != null) {
+                            val tempServersIndexed =
+                                SessionManager.selectedServer!!.channels.sortedWith(
+                                    compareBy<OmaOuterClass.Channel> { it.type != OmaOuterClass.ChannelType.TEXT }
+                                        .thenBy { it.name.lowercase() }
+                                )
+                            val index =
+                                tempServersIndexed.indexOf(SessionManager.selectedServer!!.hashChannels[state.channel.channelId])
+                            (binding.serverChannels.adapter as ChannelAdapter).notifyItemChanged(
+                                index
+                            )
+                        }
+                    }
+
+                    is MainViewModel.UiState.ChannelLeft -> {
+                        if (SessionManager.selectedServer != null) {
+                            val tempServersIndexed =
+                                SessionManager.selectedServer!!.channels.sortedWith(
+                                    compareBy<OmaOuterClass.Channel> { it.type != OmaOuterClass.ChannelType.TEXT }
+                                        .thenBy { it.name.lowercase() }
+                                )
+                            val index =
+                                tempServersIndexed.indexOf(SessionManager.selectedServer!!.hashChannels[state.channel.channelId])
+                            (binding.serverChannels.adapter as ChannelAdapter).notifyItemChanged(
+                                index
+                            )
+                        }
+                    }
+
+                    else -> Unit
+                }
+            }
+        }
 
     }
 

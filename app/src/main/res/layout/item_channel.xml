@@ -1,19 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TextView android:id="@+id/tv_channel_name"
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="8dp"
-    android:layout_marginStart="@dimen/def_padding"
-    android:layout_marginTop="@dimen/def_padding"
-    android:text="general"
+    android:orientation="vertical">
 
-    android:textSize="16sp"
-    android:maxLines="1"
-    android:ellipsize="end"
-    app:drawableTint="@color/white"
-    android:drawablePadding="@dimen/def_padding"
-    android:gravity="center_vertical"
+    <TextView
+        android:id="@+id/tv_channel_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/def_padding"
+        android:layout_marginTop="@dimen/def_padding"
+        android:drawablePadding="@dimen/def_padding"
+        android:ellipsize="end"
+        android:gravity="center_vertical"
+        android:maxLines="1"
+        android:padding="@dimen/x2_def_padding"
+        android:text="general"
+        android:textSize="16sp"
+        app:drawableStartCompat="@drawable/ic_text_channel"
 
-    app:drawableStartCompat="@drawable/ic_text_channel" />
+        app:drawableTint="@color/white" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:orientation="vertical"
+        android:id="@+id/tvMemberList"
+        android:visibility="gone"
+        android:layout_marginStart="@dimen/x4_def_padding"
+        android:layout_height="wrap_content">
+
+
+    </LinearLayout>
+</LinearLayout>

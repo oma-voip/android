@@ -36,4 +36,8 @@
     <string name="create_space"><u>Create Space</u></string>
     <string name="join_space"><u>Join Space</u></string>
     <string name="oma_notification_channel">oma_notification_channel</string>
+    <string name="join_to_voice_chat">join to voice chat</string>
+    <string name="mute">mute mic</string>
+    <string name="hangup">end call</string>
+    <string name="oma_updater">Oma updater</string>
 </resources>

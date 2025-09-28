@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorBackgroundDark"
+    tools:context=".ui.voicechat.VoiceChatFragment">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/action_bar_"
+        android:layout_width="match_parent"
+        android:layout_height="?android:attr/actionBarSize"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/back_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/back"
+            android:minWidth="42dp"
+            android:src="@drawable/ic_back"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:tint="@color/white"
+            tools:ignore="SpeakableTextPresentCheck" />
+
+        <TextView
+            android:id="@+id/channel_name"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:paddingStart="@dimen/x3_def_padding"
+            android:paddingEnd="@dimen/x2_def_padding"
+            android:textAlignment="gravity"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintLeft_toRightOf="@id/back_btn" />
+
+        <ImageButton
+            android:id="@+id/option_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/channel_option"
+            android:minWidth="42dp"
+            android:src="@drawable/ic_dots"
+            app:layout_constraintRight_toRightOf="parent"
+            app:tint="@color/white"
+            tools:ignore="SpeakableTextPresentCheck" />
+
+        <com.google.android.material.divider.MaterialDivider
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="0dp"
+            android:padding="0dp"
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!--    <GridLayout-->
+    <!--        android:layout_width="match_parent"-->
+    <!--        app:layout_constraintTop_toBottomOf="@id/action_bar_"-->
+    <!--        app:layout_constraintBottom_toBottomOf="parent"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:id="@+id/voice_grid"-->
+    <!--        />-->
+
+    <!--        <androidx.recyclerview.widget.RecyclerView-->
+    <!--            android:layout_width="match_parent"-->
+    <!--            android:layout_height="0dp"-->
+    <!--            android:layout_margin="@dimen/x2_def_padding"-->
+    <!--            app:layout_constraintTop_toBottomOf="@id/action_bar_"-->
+    <!--            app:layout_constraintBottom_toBottomOf="parent"-->
+    <!--            android:id="@+id/voice_grid"-->
+    <!--            />-->
+
+
+    <com.google.android.flexbox.FlexboxLayout
+        android:layout_width="match_parent"
+        android:id="@+id/voice_grid"
+        android:layout_margin="@dimen/x2_def_padding"
+        android:layout_height="0dp"
+        app:flexDirection="row"
+        app:flexWrap="wrap"
+
+        app:justifyContent="center"
+        app:alignItems="center"
+        app:layout_constraintBottom_toTopOf="@id/call_control_panel"
+        app:layout_constraintTop_toBottomOf="@id/action_bar_">
+
+        <include layout="@layout/item_voicemember" />
+
+        <include layout="@layout/item_voicemember" />
+
+        <include layout="@layout/item_voicemember" />
+
+
+    </com.google.android.flexbox.FlexboxLayout>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/call_control_panel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/x2_def_padding"
+        android:layout_marginEnd="@dimen/x2_def_padding"
+        android:layout_marginBottom="@dimen/x3_def_padding"
+        app:cardBackgroundColor="@color/colorUserBarBackground"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:cardElevation="4dp"
+        android:visibility="visible">
+
+        <LinearLayout
+            android:id="@+id/panel_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:padding="@dimen/x2_def_padding">
+
+            <ImageButton
+                android:id="@+id/btn_join_call"
+                android:layout_width="@dimen/status_bar_height"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_call_start"
+                android:visibility="visible"
+                android:contentDescription="@string/join_to_voice_chat"
+                app:tint="@color/colorGreen" />
+
+            <ImageButton
+                android:id="@+id/btn_mute"
+                android:layout_width="@dimen/status_bar_height"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_mic_off"
+                android:contentDescription="@string/mute"
+                android:visibility="gone"
+                app:tint="@color/white" />
+
+            <ImageButton
+                android:id="@+id/btn_hangup"
+                android:layout_width="@dimen/status_bar_height"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_call_end"
+                android:layout_marginStart="@dimen/x3_def_padding"
+                android:contentDescription="@string/hangup"
+                android:visibility="gone"
+                app:tint="@color/colorDangerous" />
+
+            <TextView
+                android:id="@+id/tv_call_time"
+                android:layout_width="@dimen/status_bar_height"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:text="00:00"
+                android:layout_marginStart="@dimen/x3_def_padding"
+                android:visibility="gone"
+                android:gravity="center_vertical" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

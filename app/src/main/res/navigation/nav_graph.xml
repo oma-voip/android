@@ -27,6 +27,14 @@
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
 
+        <action
+            android:id="@+id/action_home_to_voicechat"
+            app:destination="@id/voiceChatFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
     </fragment>
 
     <fragment
@@ -78,6 +86,32 @@
         android:id="@+id/createSpaceFragment"
         android:name="me.sweettie.oma.ui.joincreatespace.JoinCreateSpaceFragment"
         android:label="join/create Space"
-        tools:layout="@layout/fragment_joincreatespace"></fragment>
+        tools:layout="@layout/fragment_joincreatespace" />
+
+    <fragment
+        android:id="@+id/voiceChatFragment"
+        tools:layout="@layout/fragment_voice_chat"
+        android:name="me.sweettie.oma.ui.voicechat.VoiceChatFragment"
+        android:label="VoiceChatFragment">
+
+        <action
+            android:id="@+id/action_voicechat_to_members"
+            app:destination="@id/membersFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <argument
+            android:name="channelId"
+            app:argType="string"
+            app:nullable="false" />
+
+        <argument
+            android:name="serverId"
+            app:argType="string"
+            app:nullable="false" />
+
+    </fragment>
 
 </navigation>

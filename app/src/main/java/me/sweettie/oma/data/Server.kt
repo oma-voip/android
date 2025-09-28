@@ -3,7 +3,7 @@ package me.sweettie.oma.data
 import me.sweettie.oma.network.GrpcClient
 import proto.OmaOuterClass
 import proto.OmaOuterClass.Space
-import java.util.*
+import java.util.Collections
 
 class Server(
     val space: Space,
@@ -26,6 +26,14 @@ class Server(
         channels.forEach {
             hashChannels[it.id] = it
         }
+    }
+
+    fun getMemberById(id: String): OmaOuterClass.User? {
+        members.forEach {
+            if (it.id.equals(id))
+                return it
+        }
+        return null
     }
 
     init {

@@ -8,6 +8,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="icon_background">#333A30</color>
+    <color name="svg_icon_background">#333A30</color>
 
     <color name="colorBackgroundDark">#232323</color>       <!-- th.Bg в createDarkTheme -->
     <color name="colorMoreBackgroundDark">#131313</color>       <!-- th.Bg в createDarkTheme -->
@@ -46,5 +47,6 @@
     <color name="material_divider_color" tools:override="true">
         @color/divider
     </color>
+
 
 </resources>

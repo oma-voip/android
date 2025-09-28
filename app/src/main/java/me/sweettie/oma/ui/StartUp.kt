@@ -15,7 +15,14 @@ import me.sweettie.oma.ui.login.LoginActivity
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.register.ConfirmEmailActivity
 import me.sweettie.oma.ui.register.RegisterActivity
-import me.sweettie.oma.utils.*
+import me.sweettie.oma.ui.update.UpdateActivity
+import me.sweettie.oma.updater.VersionChecker
+import me.sweettie.oma.utils.AttachmentCacheManager
+import me.sweettie.oma.utils.SecurePrefs
+import me.sweettie.oma.utils.SessionManager
+import me.sweettie.oma.utils.SessionState
+import me.sweettie.oma.utils.Utils
+import me.sweettie.oma.utils.Utils.getVersionCode
 
 class StartUp : AppCompatActivity() {
 
@@ -35,47 +42,66 @@ class StartUp : AppCompatActivity() {
         SessionManager.cacheManager = AttachmentCacheManager(this, GrpcClient::downloadChunks)
         lifecycleScope.launch {
             try {
-                val token: String? = SecurePrefs.sf.getString("token", null)
-//                val token: String? = null //only for test login activity
-                if (token != null) {
-                    SessionManager.token = token
-                    val user = GrpcClient.getUser("me")
-                    if (user != null) {
-                        SessionManager.currentUser = user
-
-                        val t = GrpcClient.getServers()
-                        if (t == null) {
-                            return@launch
-                        }
-                        val servers = mutableListOf<Server>()
-                        println("Init servers: ${t.spacesList.size}")
-                        t.spacesList.forEach {
-
-                            servers.add(Server(it))
-                        }
-                        SessionManager.servers = servers
-
-                        keepSplash = false
-                        Utils.openActivity(this@StartUp, MainActivity::class.java)
-                        return@launch
-                    }
+                val checker = VersionChecker()
+                try {
+                    val info = checker.fetchVersionInfo()
+                    SessionManager.updateInfo = info
+                    println("${getVersionCode(applicationContext)} | ${info.version}")
+                    if (getVersionCode(applicationContext) < info.version) {
+                        Utils.openActivity(this@StartUp, UpdateActivity::class.java)
+                    } else
+                        logic()
+                } catch (e: Exception) {
+                    println("Error fetching version info: ${e.message}")
+                    logic()
                 }
-                keepSplash = false
-                when (SessionManager.currentState) {
-                    SessionState.SIGNIN -> Utils.openActivity(
-                        this@StartUp,
-                        RegisterActivity::class.java
-                    )
-                    SessionState.CEMAIL -> Utils.openActivity(
-                        this@StartUp,
-                        ConfirmEmailActivity::class.java
-                    )
-                    else -> Utils.openActivity(this@StartUp, LoginActivity::class.java)
 
-                }
+
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    private suspend fun logic() {
+        val token: String? = SecurePrefs.sf.getString("token", null)
+//                val token: String? = null //only for test login activity
+        if (token != null) {
+            SessionManager.token = token
+            val user = GrpcClient.getUser("me")
+            if (user != null) {
+                SessionManager.currentUser = user
+
+                val t = GrpcClient.getServers()
+                if (t == null) {
+                    return
+                }
+                val servers = arrayListOf<Server>()
+                println("Init servers: ${t.spacesList.size}")
+                t.spacesList.forEach {
+                    servers.add(Server(it))
+                }
+                SessionManager.servers = servers
+
+                keepSplash = false
+                Utils.openActivity(this@StartUp, MainActivity::class.java)
+                return
+            }
+        }
+        keepSplash = false
+        when (SessionManager.currentState) {
+            SessionState.SIGNIN -> Utils.openActivity(
+                this@StartUp,
+                RegisterActivity::class.java
+            )
+
+            SessionState.CEMAIL -> Utils.openActivity(
+                this@StartUp,
+                ConfirmEmailActivity::class.java
+            )
+
+            else -> Utils.openActivity(this@StartUp, LoginActivity::class.java)
+
         }
     }
 

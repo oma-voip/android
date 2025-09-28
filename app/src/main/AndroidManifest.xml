@@ -4,31 +4,52 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission
+        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
+        tools:ignore="RequestInstallPackagesPolicy" />
+
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/icon"
+        android:icon="@mipmap/svg_icon"
         android:label="@string/app_name"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:roundIcon="@mipmap/icon_round"
+        android:roundIcon="@mipmap/svg_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.Oma"
         tools:targetApi="33">
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="me.sweettie.oma.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+        <activity
+            android:name=".ui.update.UpdateActivity"
+            android:exported="true" />
 
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="@string/oma_notification_channel" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/oma" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/icon_background" />
 
         <service
             android:name=".network.firebase.FBService"
             android:enabled="true"
             android:exported="false">
-
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
-
         </service>
 
         <activity
@@ -40,27 +61,32 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="OPEN_STARTUP_ACTIVITY" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
 
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
         <activity
-            android:theme="@style/Theme.Oma"
             android:name=".ui.main.MainActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:theme="@style/Theme.Oma" />
         <activity
-            android:theme="@style/Theme.Oma"
             android:name=".ui.login.LoginActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:theme="@style/Theme.Oma" />
         <activity
-            android:theme="@style/Theme.Oma"
             android:name=".ui.register.RegisterActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:theme="@style/Theme.Oma" />
         <activity
-            android:theme="@style/Theme.Oma"
             android:name=".ui.register.ConfirmEmailActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:theme="@style/Theme.Oma" />
     </application>
 
 </manifest>

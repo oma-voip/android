@@ -5,5 +5,6 @@
     <dimen name="def_padding">4dp</dimen>
     <dimen name="x2_def_padding">8dp</dimen>
     <dimen name="x3_def_padding">16dp</dimen>
-    <dimen name="status_bar_height">48dp</dimen>  <!-- from sources -->
+    <dimen name="status_bar_height">48dp</dimen>
+    <dimen name="x4_def_padding">32dp</dimen>  <!-- from sources -->
 </resources>

@@ -2,8 +2,9 @@ package me.sweettie.oma.utils
 
 import me.sweettie.oma.data.MessageList
 import me.sweettie.oma.data.Server
+import me.sweettie.oma.updater.VersionInfo
 import proto.OmaOuterClass
-import java.util.*
+import java.util.UUID
 
 enum class SessionState {
     NULL,
@@ -15,15 +16,19 @@ enum class SessionState {
 
 object SessionManager {
 
+    lateinit var updateInfo: VersionInfo
+    var startCallTime: Long = -1L
     var selectedServer: Server? = null
     var token: String? = null
     var currentUser: OmaOuterClass.User? = null
     var currentState: SessionState = SessionState.NULL
-    var servers: List<Server> = Collections.emptyList()
+    var servers: ArrayList<Server> = arrayListOf()
     val onlineUsers: ArrayList<String> = arrayListOf()
     var uuid: UUID? = null
     var selectedChannel: String? = null
     val cachedMessageList: HashMap<String, MessageList> = HashMap()
+    val channelMembers: HashMap<String, ArrayList<OmaOuterClass.VoiceMember>> = HashMap()
+    var muted: Boolean = false
 
 //    Utils
 
@@ -52,10 +57,19 @@ object SessionManager {
 
     fun getServerBySpaceId(serverId: String): Server? {
         servers.forEach {
-            if (it.space.id == serverId)
+            if (it.space.id.equals(serverId))
                 return it
         }
         return null
+    }
+
+    fun updateServer(r: Server) {
+        val t = getServerBySpaceId(r.space.id)
+        servers.remove(t)
+        servers.add(r)
+        if (selectedServer != null && selectedServer == t) {
+            selectedServer = r
+        }
     }
 
 }

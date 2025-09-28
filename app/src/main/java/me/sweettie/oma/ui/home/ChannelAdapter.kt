@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.recyclerview.widget.DiffUtil
@@ -12,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import me.sweettie.oma.R
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.utils.SessionManager
+import me.sweettie.oma.utils.getById
 import me.sweettie.oma.utils.setStartDrawable
 import proto.OmaOuterClass
 import proto.OmaOuterClass.Channel
@@ -42,6 +44,7 @@ class ChannelAdapter(
 
     inner class ServerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val letter: TextView = itemView.findViewById(R.id.tv_channel_name)
+        val memberList: LinearLayout = itemView.findViewById(R.id.tvMemberList)
 
         init {
             itemView.setOnClickListener {
@@ -56,7 +59,7 @@ class ChannelAdapter(
                 lastSelected = itemView
                 val position = adapterPosition
                 if (position != RecyclerView.NO_POSITION) {
-                    onServerClick(server!!, server!!.channels[position])
+                    onServerClick(server!!, getItem(position))
                 }
             }
         }
@@ -85,15 +88,28 @@ class ChannelAdapter(
             holder.letter.setStartDrawable(R.drawable.ic_voice_channel, R.color.white)
         else if (channel.type.equals(OmaOuterClass.ChannelType.TEXT))
             holder.letter.setStartDrawable(R.drawable.ic_text_channel, R.color.white)
-        if (SessionManager.selectedChannel != null && SessionManager.selectedChannel == channel.id && SessionManager.selectedServer!!.space.id == server!!.space.id)
-            holder.itemView.background = AppCompatResources.getDrawable(
-                holder.itemView.context,
-                R.drawable.bg_selected_channel
-            )
-        else if (holder.itemView.background != null)
-            holder.itemView.background = null
-        // Можно менять цвет фона в зависимости от сервера (например, хэшем)
-        // holder.letter.setBackgroundResource(getColorForServer(serverName))
+//        if (SessionManager.selectedChannel != null && SessionManager.selectedChannel == channel.id && SessionManager.selectedServer!!.space.id == server!!.space.id)
+//            holder.itemView.background = AppCompatResources.getDrawable(
+//                holder.itemView.context,
+//                R.drawable.bg_selected_channel
+//            )
+//        else if (holder.itemView.background != null)
+        holder.itemView.background = null
+        val cm = SessionManager.channelMembers.getOrDefault(channel.id, ArrayList())
+        println("Cm size = ${cm.size}")
+        holder.memberList.removeAllViews()
+        if (cm.size > 0) {
+            val inflater = LayoutInflater.from(holder.memberList.context)
+            cm.forEach {
+                val ml = inflater.inflate(R.layout.item_member, holder.memberList, false)
+                ml.findViewById<TextView>(R.id.tvMemberName).text =
+                    server!!.members.getById(it.id)!!.username
+                holder.memberList.addView(ml)
+            }
+            holder.memberList.visibility = View.VISIBLE
+        } else {
+            holder.memberList.visibility = View.GONE
+        }
     }
 
 

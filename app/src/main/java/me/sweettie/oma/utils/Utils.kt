@@ -3,11 +3,21 @@ package me.sweettie.oma.utils
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import me.sweettie.oma.R
 
 object Utils {
+    fun getVersionCode(context: Context): Int {
+        return try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            @Suppress("DEPRECATION")
+            pInfo.versionCode
+        } catch (_: PackageManager.NameNotFoundException) {
+            -1L
+        } as Int
+    }
 
     fun openActivity(context: Context, cls: Class<*>) {
         val intent = Intent(context, cls)
@@ -30,8 +40,7 @@ object Utils {
                 dialog.dismiss()
             }
             .setNegativeButton(negativeText) { dialog, _ ->
-                if (onPositiveClick != null)
-                    onNegativeClick?.invoke()
+                onNegativeClick?.invoke()
                 dialog.dismiss()
             }
             .setCancelable(false)
