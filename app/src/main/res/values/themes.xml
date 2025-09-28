@@ -36,11 +36,19 @@
         <item name="boxStrokeColor">@color/colorQuietText</item>
         <item name="hintTextColor">@color/colorQuietText</item>
         <item name="errorTextColor">@color/colorDangerous</item>
+        <item name="cornerRadius">@dimen/x2_def_padding</item>
+        <item name="boxBackgroundColor">@color/colorInputBackground</item>
 
     </style>
 
+    <style name="Theme.Oma.ProgressDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.5</item>
+    </style>
+
     <style name="Widget.Oma.TextInputEditText">
-        <item name="android:background">@color/colorInputBackground</item>
+        <item name="android:background">@drawable/bg_editable</item>
         <item name="android:textColor">@color/colorForegroundLight</item>
     </style>
 

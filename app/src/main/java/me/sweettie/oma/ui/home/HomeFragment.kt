@@ -56,6 +56,9 @@ class HomeFragment : Fragment() {
                     SessionManager.selectedServer = server
 
                 }
+                server.members.forEach {
+                    SessionManager.updateOnlineInfo(it.id, it.online)
+                }
                 (binding.serverChannels.adapter as ChannelAdapter).updateServer(server)
                 Utils.animateTextChange(binding.serverName, server.space.name)
             }

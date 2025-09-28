@@ -48,10 +48,10 @@ object SessionManager {
         SecurePrefs.save("state", currentState.toString())
     }
 
-    fun updateOnlineInfo(on: OmaOuterClass.OnlineStateUpdated) {
-        onlineUsers.remove(on.userId)
-        if (on.online) {
-            onlineUsers.add(on.userId)
+    fun updateOnlineInfo(id: String, online: Boolean) {
+        onlineUsers.remove(id)
+        if (online) {
+            onlineUsers.add(id)
         }
     }
 

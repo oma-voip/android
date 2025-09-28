@@ -9,12 +9,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 import me.sweettie.oma.data.MessageList
 import me.sweettie.oma.databinding.FragmentChatBinding
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.main.MainViewModel
+import me.sweettie.oma.ui.progress.ProgressDialogFragment
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.clear
 import me.sweettie.oma.utils.getEndText
@@ -36,9 +38,13 @@ class ChatFragment : Fragment() {
 
     private val args: ChatFragmentArgs by navArgs()
     private lateinit var ml: MessageList
+    private lateinit var pd: ProgressDialogFragment
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        pd = ProgressDialogFragment()
+        pd.show(parentFragmentManager, "progress_dialog")
         binding.sendBtn.isEnabled = false
         val channelId = args.channelId
         val serverId = args.serverId
@@ -83,7 +89,7 @@ class ChatFragment : Fragment() {
 
     private lateinit var viewModel: MainViewModel
 
-
+    private var updateChat = false
     private fun onLoadMessage() {
         val layoutManager = LinearLayoutManager(context)
         layoutManager.stackFromEnd = true
@@ -93,7 +99,42 @@ class ChatFragment : Fragment() {
             MessageListAdapter(viewLifecycleOwner.lifecycleScope, onMessageClick = {
                 println("clicked on message!")
             })
-        (binding.listMessages.adapter as MessageListAdapter).updateData(ml)
+        (binding.listMessages.adapter as MessageListAdapter).updateData(ml).apply {
+            pd.dismiss()
+            binding.listMessages.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    val firstVisibleItemPosition =
+                        layoutManager.findLastCompletelyVisibleItemPosition()
+                    if (firstVisibleItemPosition == 0 && !updateChat) {
+                        pd.show(parentFragmentManager, "progress_dialog")
+                        updateChat = true
+                        lifecycleScope.launch {
+                            GrpcClient.getMessages(
+                                args.serverId,
+                                args.channelId,
+                                SessionManager.cachedMessageList[args.channelId]!!.messageLis.size.toLong(),
+                                onSuccess = { it ->
+                                    ml.addAll(it.messagesList)
+                                    SessionManager.cachedMessageList[args.channelId] = ml
+                                    (binding.listMessages.adapter as MessageListAdapter).updateData(
+                                        ml
+                                    )
+                                    pd.dismiss()
+                                    updateChat = false
+//                                    binding.listMessages.post {
+//                                        binding.listMessages.smoothScrollToPosition(oldSize)
+//                                    }
+                                },
+                                onError = {
+                                    updateChat = false
+                                    pd.dismiss()
+                                })
+                        }
+                    }
+                }
+            })
+        }
+
         binding.sendBtn.isEnabled = true
 
         binding.sendBtn.setOnClickListener {
@@ -123,7 +164,6 @@ class ChatFragment : Fragment() {
                                 binding.listMessages.smoothScrollToPosition(ml.stackedMessageList.size)
                             }
                         }
-//                        Toast.makeText(context, "📩 Новое сообщение: ${state.message.text}", Toast.LENGTH_SHORT).show()
                     }
                     else -> Unit
                 }

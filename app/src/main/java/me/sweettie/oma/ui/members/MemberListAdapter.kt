@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import me.sweettie.oma.R
-import me.sweettie.oma.utils.*
+import me.sweettie.oma.utils.SessionManager
 import proto.OmaOuterClass.User
 
 class MemberListAdapter() : ListAdapter<User, MemberListAdapter.MessageViewHolder>(DiffCallback()) {
@@ -40,9 +40,13 @@ class MemberListAdapter() : ListAdapter<User, MemberListAdapter.MessageViewHolde
     }
 
 
+    private fun userIsOnline(user: User): Boolean {
+        return SessionManager.onlineUsers.contains(user.id)
+    }
     fun updateData(users: List<User>) {
+
         val sortedUsers = users.sortedWith(
-            compareByDescending<User> { it.online }
+            compareByDescending<User> { userIsOnline(it) }
                 .thenBy { it.id }
         )
         submitList(sortedUsers)
@@ -53,8 +57,7 @@ class MemberListAdapter() : ListAdapter<User, MemberListAdapter.MessageViewHolde
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val sm = getItem(position) ?: return
         holder.memberName.text = sm.username
-        if (sm.online) {
-            println("User online ${sm.username}")
+        if (userIsOnline(sm)) {
             val drawables = holder.memberName.compoundDrawablesRelative
             val drawable = drawables[0] ?: return
             drawable.colorFilter =

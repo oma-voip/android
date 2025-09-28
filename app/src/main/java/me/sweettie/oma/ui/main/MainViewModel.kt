@@ -75,7 +75,8 @@ class MainViewModel : ViewModel() {
 
             OmaOuterClass.Event.EventCase.ONLINESTATEUPDATED -> {
                 val ev = event.onlineStateUpdated
-                SessionManager.updateOnlineInfo(ev)
+                println("Online status update")
+                SessionManager.updateOnlineInfo(ev.userId, ev.online)
             }
 
             OmaOuterClass.Event.EventCase.JOINSPACE -> {

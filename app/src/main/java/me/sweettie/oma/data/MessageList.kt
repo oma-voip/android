@@ -11,8 +11,13 @@ class MessageList(
     val message_: OmaOuterClass.GetMessagesResponse
 ) {
 
-    fun addMessage(message: OmaOuterClass.Message) {
+    fun addMessage(message: Message) {
         messageLis.add(0, message)
+        createStackedMessages()
+    }
+
+    fun addAll(ml: List<Message>) {
+        messageLis.addAll(ml)
         createStackedMessages()
     }
 

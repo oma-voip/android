@@ -17,13 +17,13 @@ def lifecycle_version = "2.6.1"
 
 android {
     namespace 'me.sweettie.oma'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "me.sweettie.oma"
         minSdk 26
         targetSdk 34
-        versionCode 2
+        versionCode 3
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

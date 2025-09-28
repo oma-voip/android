@@ -16,19 +16,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"
-        android:maxLines="1"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:layout_editor_absoluteX="1dp">
+        app:layout_constraintStart_toStartOf="parent">
 
         <com.google.android.material.textfield.TextInputEditText
-            style="@style/Widget.Oma.TextInputEditText"
             android:id="@+id/username"
             android:selectAllOnFocus="true"
             android:layout_width="match_parent"
             android:maxLines="1"
             android:imeOptions="actionNext"
             android:autofillHints="@string/prompt_username"
+            android:inputType="textAutoComplete"
             android:layout_height="wrap_content"
             android:hint="@string/prompt_username"
             android:minHeight="48dp" />
@@ -47,7 +45,6 @@
         tools:layout_editor_absoluteX="1dp">
 
         <com.google.android.material.textfield.TextInputEditText
-            style="@style/Widget.Oma.TextInputEditText"
             android:id="@+id/password"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

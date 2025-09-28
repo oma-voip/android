@@ -80,6 +80,7 @@ class StartUp : AppCompatActivity() {
                 println("Init servers: ${t.spacesList.size}")
                 t.spacesList.forEach {
                     servers.add(Server(it))
+
                 }
                 SessionManager.servers = servers
 
@@ -88,6 +89,7 @@ class StartUp : AppCompatActivity() {
                 return
             }
         }
+
         keepSplash = false
         when (SessionManager.currentState) {
             SessionState.SIGNIN -> Utils.openActivity(

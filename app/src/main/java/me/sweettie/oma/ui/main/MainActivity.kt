@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         try {
             FirebaseApp.getInstance()
-        } catch (e: IllegalStateException) {
+        } catch (_: IllegalStateException) {
             FirebaseApp.initializeApp(this)
         }
 
@@ -83,7 +83,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             val token = task.result
-            println("New token = ${token}")
+            println("New token = $token")
             CoroutineScope(Dispatchers.IO).launch {
                 GrpcClient.registerFbToken(token)
             }

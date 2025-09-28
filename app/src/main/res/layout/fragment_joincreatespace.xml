@@ -64,7 +64,6 @@
             tools:layout_editor_absoluteX="1dp">
 
             <com.google.android.material.textfield.TextInputEditText
-                style="@style/Widget.Oma.TextInputEditText"
                 android:id="@+id/spaceId"
                 android:selectAllOnFocus="true"
                 android:layout_width="match_parent"

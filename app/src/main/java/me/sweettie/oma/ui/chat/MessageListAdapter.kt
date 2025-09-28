@@ -17,7 +17,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.data.MessageList
-import me.sweettie.oma.utils.*
+import me.sweettie.oma.utils.SessionManager
+import me.sweettie.oma.utils.Utils
+import me.sweettie.oma.utils.getById
+import me.sweettie.oma.utils.getOnlyDateFormat
+import me.sweettie.oma.utils.getTimeFormat1
+import me.sweettie.oma.utils.getTimeFormat2
+import me.sweettie.oma.utils.isImage
+import proto.OmaOuterClass
 import proto.OmaOuterClass.Message
 
 class MessageListAdapter(
@@ -144,23 +151,40 @@ class MessageListAdapter(
     @SuppressLint("ResourceAsColor")
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val sm = getItem(position) ?: return
-        val r = SessionManager.selectedServer!!.members.getById(sm[0].userId)
-        if (r == null) {
-            println("Cant find user with id = ${sm[0].userId}")
-            return
+        val userId = sm[0].userId
+        val user = SessionManager.selectedServer?.members?.getById(userId)
+
+        if (user != null) {
+            bindMessage(holder, sm, user)
+        } else {
+            holder.nickname.text = "Loading..."
+            holder.listL.removeAllViews()
+
+            Utils.getCacheUser(userId) { loadedUser ->
+                holder.nickname.post {
+                    if (loadedUser != null)
+                        bindMessage(holder, sm, loadedUser)
+                }
+            }
         }
-        holder.nickname.text = r.username
 
-        holder.listL.removeAllViews()
-
-        val stacked = sm.size > 1
-        holder.timestamp.text = if (!stacked) sm[0].getTimeFormat1() else sm[0].getOnlyDateFormat()
-        putMessage(holder.listL, sm.reversed())
 
         // Можно менять цвет фона в зависимости от сервера (например, хэшем)
         // holder.letter.setBackgroundResource(getColorForServer(serverName))
     }
 
+
+    private fun bindMessage(
+        holder: MessageViewHolder,
+        sm: List<Message>,
+        user: OmaOuterClass.User
+    ) {
+        holder.nickname.text = user.username
+        holder.listL.removeAllViews()
+        val stacked = sm.size > 1
+        holder.timestamp.text = if (!stacked) sm[0].getTimeFormat1() else sm[0].getOnlyDateFormat()
+        putMessage(holder.listL, sm.reversed())
+    }
 
 //    @SuppressLint("NotifyDataSetChanged")
 //    fun updateServer(server: Server) {

@@ -6,7 +6,13 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.sweettie.oma.R
+import me.sweettie.oma.network.GrpcClient
+import proto.OmaOuterClass
 
 object Utils {
     fun getVersionCode(context: Context): Int {
@@ -59,5 +65,28 @@ object Utils {
                     .start()
             }
             .start()
+    }
+
+    private val cachedUsers: HashMap<String, OmaOuterClass.User> = HashMap()
+    fun getCacheUser(userId: String, onGet: (OmaOuterClass.User?) -> Unit) {
+        if (cachedUsers.containsKey(userId))
+            onGet(cachedUsers[userId]!!)
+        else {
+            CoroutineScope(Dispatchers.IO).launch {
+                val r2 = GrpcClient.getUser(userId)
+                if (r2 == null) {
+                    withContext(Dispatchers.Main) {
+                        onGet(null)
+                    }
+                    return@launch
+
+                }
+                withContext(Dispatchers.Main) {
+                    cachedUsers.put(userId, r2)
+                    onGet(cachedUsers[userId]!!)
+                }
+
+            }
+        }
     }
 }
