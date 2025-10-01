@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.photoview.FullScreenActivity">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:transitionName="actionBar"
+        android:background="@color/colorBackgroundDark"
+        app:layout_constraintTop_toTopOf="parent"
+        android:id="@+id/action_bar_"
+        android:orientation="horizontal"
+        android:layout_height="?android:attr/actionBarSize">
+
+        <ImageButton
+            android:id="@+id/back_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:minWidth="42dp"
+            android:src="@drawable/ic_back"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:tint="@color/white"
+            tools:ignore="SpeakableTextPresentCheck"
+            android:contentDescription="@string/back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            app:layout_constraintLeft_toRightOf="@id/back_btn"
+            android:textAlignment="gravity"
+            android:paddingStart="@dimen/x3_def_padding"
+            android:paddingEnd="@dimen/x2_def_padding"
+            android:textStyle="bold"
+            android:textSize="20sp"
+            android:id="@+id/channel_name"
+            android:gravity="center_vertical" />
+
+        <ImageButton
+            android:id="@+id/option_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:background="@android:color/transparent"
+            android:minWidth="42dp"
+            app:tint="@color/white"
+            android:src="@drawable/ic_dots"
+            tools:ignore="SpeakableTextPresentCheck"
+            android:contentDescription="@string/channel_option" />
+
+        <com.google.android.material.divider.MaterialDivider
+            android:layout_width="match_parent"
+            android:padding="0dp"
+            android:layout_margin="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
+        android:id="@+id/full_photo"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:transitionName="shared_image"
+        app:layout_constraintTop_toBottomOf="@id/action_bar_"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

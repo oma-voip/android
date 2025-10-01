@@ -96,7 +96,10 @@ class ChatFragment : Fragment() {
         layoutManager.reverseLayout = false
         binding.listMessages.layoutManager = layoutManager
         binding.listMessages.adapter =
-            MessageListAdapter(viewLifecycleOwner.lifecycleScope, onMessageClick = {
+            MessageListAdapter(
+                requireActivity(),
+                viewLifecycleOwner.lifecycleScope,
+                onMessageClick = {
                 println("clicked on message!")
             })
         (binding.listMessages.adapter as MessageListAdapter).updateData(ml).apply {
@@ -105,9 +108,10 @@ class ChatFragment : Fragment() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     val firstVisibleItemPosition =
                         layoutManager.findLastCompletelyVisibleItemPosition()
+                    println(firstVisibleItemPosition)
                     if (firstVisibleItemPosition == 0 && !updateChat) {
-                        pd.show(parentFragmentManager, "progress_dialog")
                         updateChat = true
+                        pd.show(parentFragmentManager, "progress_dialog")
                         lifecycleScope.launch {
                             GrpcClient.getMessages(
                                 args.serverId,

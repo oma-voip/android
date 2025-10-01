@@ -40,4 +40,9 @@
     <string name="mute">mute mic</string>
     <string name="hangup">end call</string>
     <string name="oma_updater">Oma updater</string>
+    <string name="image">image</string>
+    <string name="save_in_galary">Save to gallery</string>
+    <string name="share">Share</string>
+    <string name="copy">Copy to clipboard</string>
+    <string name="delete">Delete</string>
 </resources>

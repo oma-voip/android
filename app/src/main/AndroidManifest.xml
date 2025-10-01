@@ -19,7 +19,11 @@
         android:roundIcon="@mipmap/svg_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.Oma"
-        tools:targetApi="33">
+        tools:targetApi="36">
+        <activity
+            android:name=".ui.photoview.FullScreenActivity"
+            android:exported="true" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="me.sweettie.oma.fileprovider"
@@ -29,6 +33,7 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
         <activity
             android:name=".ui.update.UpdateActivity"
             android:exported="true" />

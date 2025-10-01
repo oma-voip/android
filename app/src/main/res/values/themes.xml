@@ -25,6 +25,8 @@
 
         <item name="colorControlNormal">?android:attr/windowBackground</item>
         <item name="android:navigationBarColor">?android:attr/windowBackground</item>
+
+        <item name="popupMenuStyle">@style/MyPopupMenu</item>
     </style>
 
     <style name="Widget" />
@@ -38,7 +40,6 @@
         <item name="errorTextColor">@color/colorDangerous</item>
         <item name="cornerRadius">@dimen/x2_def_padding</item>
         <item name="boxBackgroundColor">@color/colorInputBackground</item>
-
     </style>
 
     <style name="Theme.Oma.ProgressDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
@@ -110,5 +111,9 @@
         <item name="android:textColorHint">@color/colorQuietText</item>
         <item name="colorControlNormal">@color/colorMoreBackgroundDark</item>
         <item name="android:navigationBarColor">@color/colorMoreBackgroundDark</item>
+    </style>
+
+    <style name="MyPopupMenu" parent="Widget.AppCompat.PopupMenu">
+        <item name="android:popupBackground">@color/svg_icon_background</item>
     </style>
 </resources>

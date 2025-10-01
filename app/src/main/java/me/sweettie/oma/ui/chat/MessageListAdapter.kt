@@ -1,6 +1,7 @@
 package me.sweettie.oma.ui.chat
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,15 +9,18 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.LinearLayoutCompat
+import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.data.MessageList
+import me.sweettie.oma.ui.custom.chatimage.ChatImage
+import me.sweettie.oma.ui.photoview.FullScreenActivity
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.Utils
 import me.sweettie.oma.utils.getById
@@ -28,6 +32,7 @@ import proto.OmaOuterClass
 import proto.OmaOuterClass.Message
 
 class MessageListAdapter(
+    private val fragmentActivity: FragmentActivity,
     private val coroutineScope: CoroutineScope,
     private val onMessageClick: (Message) -> Unit
 ) : ListAdapter<List<Message>, MessageListAdapter.MessageViewHolder>(DiffCallback()) {
@@ -92,29 +97,40 @@ class MessageListAdapter(
 
                 val attachmentLayout =
                     inflater.inflate(R.layout.stacked_message_attachment, attachmentList, false)
+                if (attach.isImage()) {
+                    val attachmentImage = ChatImage(attachmentLayout.context, attach).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        onPhotoClick = {
+                            val intent =
+                                Intent(fragmentActivity, FullScreenActivity::class.java)
+                            intent.putExtra("photoUri", file!!.toUri())
+                            intent.putExtra(
+                                "actionBarName",
+                                fragmentActivity.findViewById<TextView>(R.id.channel_name).text
+                            )
 
-                val attachmentImage: ImageView =
-                    attachmentLayout.findViewById(R.id.tvAttachmentImage)
-                val attachmentText: TextView = attachmentLayout.findViewById(R.id.tvAttachmentText)
-
-
-                attachmentImage.apply {
-                    adjustViewBounds = attach.isImage()
-
-                    if (attach.isImage()) {
-                        attachmentText.visibility = View.GONE
-                        coroutineScope.launch {
-                            val file = SessionManager.cacheManager.getFile(attach)
-                            if (file != null) {
-                                this@apply.post {
-                                    println("Try to set image with uri: ${file.toUri()}")
-                                    this@apply.setImageURI(file.toUri())
-                                }
-                            } else {
-                                println("Failed to download file with id ${attach.id}")
-                            }
+                            val options =
+                                ActivityOptionsCompat.makeSceneTransitionAnimation(
+                                    fragmentActivity,
+                                    imageView,
+                                    "shared_image"
+                                )
+                            fragmentActivity.startActivity(intent, options.toBundle())
                         }
-                    } else {
+                    }
+                    attachmentLayout.findViewById<LinearLayout>(R.id.linearLayout)
+                        .addView(attachmentImage, 0)
+                } else {
+                    val attachmentImage = ImageView(attachmentLayout.context).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.MATCH_PARENT
+                        )
+                        transitionName = "shared_image"
+                        adjustViewBounds = false
                         setImageResource(R.drawable.ic_save)
                         layoutParams = LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -127,7 +143,10 @@ class MessageListAdapter(
                             )
                         )
                     }
+                    attachmentLayout.findViewById<LinearLayout>(R.id.linearLayout)
+                        .addView(attachmentImage, 0)
                 }
+                val attachmentText: TextView = attachmentLayout.findViewById(R.id.tvAttachmentText)
 
                 if (!attach.isImage()) {
                     attachmentText.text = attach.filename

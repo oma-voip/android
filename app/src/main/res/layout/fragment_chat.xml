@@ -11,6 +11,7 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
+        android:transitionName="actionBar"
         android:background="@color/colorBackgroundDark"
         app:layout_constraintTop_toTopOf="parent"
         android:id="@+id/action_bar_"

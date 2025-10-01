@@ -18,6 +18,7 @@ import me.sweettie.oma.ui.main.MainActivity
 class FBService : FirebaseMessagingService() {
 
 
+
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         println("New token = $token")
@@ -29,27 +30,63 @@ class FBService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
         println("New message:\n type = ${message.messageType}\n ${message.data}")
+        var text = ""
         message.data.forEach { (t, u) ->
             println("$t -> $u")
+            text += "$t -> $u | "
         }
-
-        // only for in app notification
-//        if (message.notification != null) {
-//            println("Try to show notification with title ${message.notification!!.title} and body ${message.notification!!.body}")
-//            showNotification(this,
-//                message.notification!!.title!!,
-//                message.notification!!.body!!
-//            )
-//        }
+        if (message.notification == null) {
+            if (message.data.getOrDefault("type", "").equals("message_received"))
+                showNotification(this, message)
+        }
     }
 
-    companion object {
-        fun showNotification(context: Context, title: String, body: String) {
-            val notificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+//    private fun test1(context: Context){
+//
+////        val inboxStyle = NotificationCompat.InboxStyle()
+////            .setBigContentTitle("ServerName #channel")
+////            .setSummaryText("${messages.size} new messages")
+//
+////        val markAsReadIntent = Intent(context, MainActivity::class.java).apply {
+////            action = "ACTION_MARK_AS_READ"
+////            putExtra("notification_id", "notificationId")
+////        }
+////        val markAsReadPendingIntent = PendingIntent.getBroadcast(
+////            context, 0, markAsReadIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+////        )
+//
+////        val replyIntent = Intent(context, MainActivity::class.java).apply {
+////            action = "ACTION_REPLY"
+////            putExtra("notification_id", "testid")
+////        }
+////        val replyPendingIntent = PendingIntent.getBroadcast(
+////            context, 1, replyIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+////        )
+//
+////        val notification = NotificationCompat.Builder(context, context.getString(R.string.oma_notification_channel))
+////            .setSmallIcon(R.mipmap.svg_icon)
+////            .setContentTitle("ServerName #channel")
+////            .setStyle(inboxStyle)
+////            .addAction(R.drawable.ic_attachment_file, "Mark As Read", markAsReadPendingIntent)
+////            .addAction(R.drawable.ic_mic, "Reply", replyPendingIntent)
+////            .setAutoCancel(true)
+////            .build()
+//
+//        val notificationManager =
+//            context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+//        notificationManager.notify(System.currentTimeMillis().toInt(), notification)
+//    }
 
-            val intent = Intent(context, MainActivity::class.java)
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    companion object {
+        fun showNotification(context: Context, message: RemoteMessage) {
+            val notificationManager =
+                context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+            val intent = Intent(context, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putExtra("serverId", message.data["spaceID"])
+                putExtra("channelId", message.data["channelID"])
+            }
 
             val pendingIntent = PendingIntent.getActivity(
                 context,
@@ -64,8 +101,9 @@ class FBService : FirebaseMessagingService() {
                     context.getString(R.string.oma_notification_channel)
                 )
                     .setSmallIcon(R.mipmap.svg_icon)
-                    .setContentTitle(title)
-                    .setContentText(body)
+                    .setContentTitle(message.data["space"] + "@" + message.data["channel"] + " | " + message.data["user"])
+                    .setColor(context.getColor(R.color.svg_icon_background))
+                    .setContentText(message.data["text"])
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent)
 
