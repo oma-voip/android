@@ -1,14 +1,17 @@
 package me.sweettie.oma.utils
 
+import android.content.Context
 import android.content.res.Resources
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.TextView
 import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import proto.OmaOuterClass
 import java.nio.ByteBuffer
 import java.time.Instant
@@ -43,6 +46,13 @@ fun EditText.isPresent(): Boolean {
 
 fun EditText.getEndText(): String {
     return this.text.toString()
+}
+
+fun Fragment.hideKeyboard() {
+    val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+    view?.windowToken?.let { token ->
+        imm.hideSoftInputFromWindow(token, 0)
+    }
 }
 
 fun Editable?.isPresent(): Boolean {

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="@dimen/x2_def_padding"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/hui2"
+        android:orientation="vertical"
+        app:layout_constraintTop_toTopOf="parent">
+
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <com.devrj.superellipse.SuperEllipseImageView
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintLeft_toLeftOf="parent"
+                android:id="@+id/hui"
+                app:shapeBackgroundColor="@color/colorContrastBackground"
+                app:shapeBorderWidth="0dp" />
+
+            <ImageView
+                android:id="@+id/tvAttachmentItemImage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_draft"
+                app:layout_constraintTop_toTopOf="@id/hui"
+                app:layout_constraintLeft_toLeftOf="@id/hui"
+                app:layout_constraintRight_toRightOf="@id/hui"
+                app:layout_constraintBottom_toBottomOf="@id/hui"
+                app:tint="@color/white" />
+
+            <TextView
+                android:id="@+id/tvAttachmentItemName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintLeft_toRightOf="@id/hui"
+                android:text="Select from file system"
+                android:layout_marginStart="@dimen/x2_def_padding"
+                app:layout_constraintBottom_toBottomOf="@id/hui"
+                app:layout_constraintTop_toTopOf="@id/hui" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/recent_files"
+        android:id="@+id/hui3"
+        app:layout_constraintTop_toBottomOf="@id/hui2"
+
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginBottom="@dimen/x2_def_padding"
+        android:layout_marginTop="@dimen/x2_def_padding" />
+
+    <com.google.android.material.divider.MaterialDivider
+        android:layout_width="match_parent"
+        android:layout_margin="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/hui3" />
+</androidx.constraintlayout.widget.ConstraintLayout>

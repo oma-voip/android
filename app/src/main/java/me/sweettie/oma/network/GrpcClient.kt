@@ -1,9 +1,14 @@
 package me.sweettie.oma.network
 
+import android.content.Context
+import android.util.Base64.NO_WRAP
+import android.util.Base64.encodeToString
+import androidx.core.net.toUri
 import com.google.protobuf.Empty
 import io.grpc.Channel
 import io.grpc.ClientInterceptors
 import io.grpc.ManagedChannel
+import io.grpc.Metadata
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -13,9 +18,11 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import proto.OmaGrpc
 import proto.OmaOuterClass
+import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -28,8 +35,8 @@ object GrpcClient {
         .build()
 
     private val ic: Channel = ClientInterceptors.intercept(channel, AuthInterceptor())
-
     private val stub = OmaGrpc.newBlockingStub(ic)
+
     private val eventStub = OmaGrpc.newStub(ic)
 
     fun subscribeToEvents(): Flow<OmaOuterClass.Event> = callbackFlow {
@@ -52,6 +59,58 @@ object GrpcClient {
         }
     }
 
+
+    suspend fun sendFile(file: File, context: Context): OmaOuterClass.UploadResponse =
+        suspendCancellableCoroutine { cont ->
+            val fileName = file.name
+            val fileSize = file.length()
+
+            val fileNameBase64 = encodeToString(fileName.toByteArray(Charsets.UTF_8), NO_WRAP)
+
+            val headers = Metadata().apply {
+                val key = Metadata.Key.of("filename", Metadata.ASCII_STRING_MARSHALLER)
+                val keySize = Metadata.Key.of("size", Metadata.ASCII_STRING_MARSHALLER)
+                put(key, fileNameBase64)
+                put(keySize, fileSize.toString())
+            }
+            val stubWithHeaders = io.grpc.stub.MetadataUtils.attachHeaders(eventStub, headers)
+
+            val responseObserver = object : StreamObserver<OmaOuterClass.UploadResponse> {
+                override fun onNext(value: OmaOuterClass.UploadResponse) {
+                    cont.resume(value) {}
+                }
+
+                override fun onError(t: Throwable) {
+                    if (cont.isActive) cont.resumeWithException(t)
+                }
+
+                override fun onCompleted() {
+                }
+            }
+
+            val requestObserver = stubWithHeaders.upload(responseObserver)
+
+            try {
+                val inputStream = context.contentResolver.openInputStream(file.toUri())
+                    ?: throw IllegalArgumentException("Uri openInputStream fail")
+
+                val buffer = ByteArray(32 * 1024)
+                var read: Int
+                while (inputStream.read(buffer).also { read = it } != -1) {
+                    val chunk = OmaOuterClass.FileChunk.newBuilder()
+                        .setContent(com.google.protobuf.ByteString.copyFrom(buffer, 0, read))
+                        .build()
+                    requestObserver.onNext(chunk)
+                }
+                inputStream.close()
+
+                requestObserver.onCompleted()
+
+            } catch (e: Exception) {
+                requestObserver.onError(e)
+                if (cont.isActive) cont.resumeWithException(e)
+            }
+        }
 
     suspend fun registerFbToken(token: String) {
         try {
@@ -282,15 +341,32 @@ object GrpcClient {
         }
     }
 
-    suspend fun sendMessage(serverId: String, channelId: String, message: String) {
+    suspend fun sendMessage(
+        serverId: String,
+        channelId: String,
+        message: String,
+        attachmentId: List<String> = listOf()
+    ) {
         try {
+
+            val attachments = attachmentId.map { id ->
+                OmaOuterClass.SendAttachment.newBuilder()
+                    .setId(id)
+                    .build()
+            }
+
             val req = OmaOuterClass.SendMessageRequest.newBuilder()
                 .setSpaceId(serverId)
                 .setChannelId(channelId)
+                .addAllAttachments(attachments)
                 .setText(message)
                 .build()
+
+
+
             withContext(Dispatchers.IO) {
                 stub.sendMessage(req)
+
             }
         } catch (_: Exception) {
         }

@@ -9,9 +9,12 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
 import androidx.core.net.toUri
+import coil3.load
+import coil3.request.placeholder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.sweettie.oma.R
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.Utils
@@ -46,17 +49,22 @@ class ChatImage @JvmOverloads constructor(
             CoroutineScope(Dispatchers.IO).launch {
                 file = SessionManager.cacheManager.getFile(attachment)
                 file?.let {
-                    imageView.setImageURI(file!!.toUri())
-                    CoroutineScope(Dispatchers.Main).launch {
-                        imageView.setOnClickListener { onPhotoClick?.invoke(this@ChatImage) }
+                    withContext(Dispatchers.Main) {
+                        imageView.apply {
+                            load(file!!.toUri()) {
+                                placeholder(R.color.colorUserBarBackground)
+                            }
+                            setOnClickListener { onPhotoClick?.invoke(this@ChatImage) }
+                        }
                     }
                 }
             }
         } else {
+
             val preview = attachment.preview
             imageView.setImageBitmap(
                 Utils.createBitmapFromRGBA(
-                    preview.content,
+                    preview,
                     preview.stride.toInt()
                 )
             )
@@ -72,9 +80,14 @@ class ChatImage @JvmOverloads constructor(
                             file = SessionManager.cacheManager.getFile(attachment)
                             file?.let {
                                 CoroutineScope(Dispatchers.Main).launch {
+
+                                    imageView.apply {
+                                        load(file!!.toUri()) {
+                                            placeholder(R.color.colorUserBarBackground)
+                                        }
+                                        setOnClickListener { onPhotoClick?.invoke(this@ChatImage) }
+                                    }
                                     progressBar.visibility = GONE
-                                    imageView.setImageURI(file!!.toUri())
-                                    imageView.setOnClickListener { onPhotoClick?.invoke(this@ChatImage) }
                                 }
 
                             }

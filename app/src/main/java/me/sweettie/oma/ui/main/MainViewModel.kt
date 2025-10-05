@@ -104,6 +104,9 @@ class MainViewModel : ViewModel() {
             OmaOuterClass.Event.EventCase.MESSAGERECEIVED -> {
                 val message = event.messageReceived.message
                 println("💬 MESSAGE_RECEIVED: ${message.text} from ${message.userId}")
+                message.attachmentsList.forEach {
+                    println("File with id ${it.id} and content.size() = ${it.preview.content.size()}")
+                }
                 _uiState.value = UiState.NewMessage(event.messageReceived)
             }
 

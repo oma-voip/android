@@ -18,11 +18,13 @@ import me.sweettie.oma.ui.register.RegisterActivity
 import me.sweettie.oma.ui.update.UpdateActivity
 import me.sweettie.oma.updater.VersionChecker
 import me.sweettie.oma.utils.AttachmentCacheManager
+import me.sweettie.oma.utils.AttachmentStorage
 import me.sweettie.oma.utils.SecurePrefs
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.SessionState
 import me.sweettie.oma.utils.Utils
 import me.sweettie.oma.utils.Utils.getVersionCode
+
 
 class StartUp : AppCompatActivity() {
 
@@ -40,6 +42,7 @@ class StartUp : AppCompatActivity() {
         SecurePrefs.init(this)
         SessionManager.loadState()
         SessionManager.cacheManager = AttachmentCacheManager(this, GrpcClient::downloadChunks)
+        AttachmentStorage.init(this)
         lifecycleScope.launch {
             try {
                 val checker = VersionChecker()

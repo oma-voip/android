@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Фон -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/colorBackgroundDark" />
+        </shape>
+    </item>
+
+    <!-- Линия вверху -->
+    <!--    <item android:height="1dp" android:gravity="top">-->
+    <!--        <shape android:shape="rectangle">-->
+    <!--            <solid android:color="@color/colorQuietText" />-->
+    <!--        </shape>-->
+    <!--    </item>-->
+
+</layer-list>

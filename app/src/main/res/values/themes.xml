@@ -1,6 +1,6 @@
 <resources>
     <!-- Base application theme. -->
-    <style name="Theme.Oma" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.Oma" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Primary brand color. Используем ContrastBg из Go темы -->
         <item name="colorPrimary">@color/colorContrastBackground</item>
         <item name="colorOnPrimary">@color/colorMoreContrastBackground</item>

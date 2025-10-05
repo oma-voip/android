@@ -23,7 +23,7 @@ android {
         applicationId "me.sweettie.oma"
         minSdk 26
         targetSdk 34
-        versionCode 11
+        versionCode 12
         versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -92,6 +92,8 @@ dependencies {
     implementation 'com.github.MicroRJ:android_superellipse:v3.0.0-alpha'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     implementation 'com.davemorrissey.labs:subsampling-scale-image-view-androidx:3.10.0'
+    implementation("io.coil-kt.coil3:coil-compose:3.3.0")
+
 }
 
 configurations {

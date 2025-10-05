@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package me.sweettie.oma.ui.main
 
 import android.Manifest
@@ -34,8 +36,8 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var navController: NavController
     private lateinit var gestureDetector: GestureDetectorCompat
-    private val SWIPE_DISTANCE_THRESHOLD = 300
-    private val SWIPE_VELOCITY_THRESHOLD = 100
+    private val swipeDistance = 300
+    private val swipeVelocity = 100
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -120,7 +122,7 @@ class MainActivity : AppCompatActivity() {
                 val diffY = e2.y - e1.y
                 println(diffX)
                 if (abs(diffX) > abs(diffY)) {
-                    if (abs(diffX) > SWIPE_DISTANCE_THRESHOLD && abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                    if (abs(diffX) > swipeDistance && abs(velocityX) > swipeVelocity) {
                         if (diffX < 0) {
                             navigateForward()
                             return true
@@ -157,10 +159,5 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        if (!navController.navigateUp()) {
-            super.onBackPressed()
-        }
-    }
+
 }
