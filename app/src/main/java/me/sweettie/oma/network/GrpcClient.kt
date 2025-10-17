@@ -396,5 +396,19 @@ object GrpcClient {
         }
     }
 
+    suspend fun setMuted(serverId: String, channelId: String, muted: Boolean) {
+        try {
+            val req = OmaOuterClass.UpdateMutedStateRequest.newBuilder()
+                .setSpaceId(serverId)
+                .setChannelId(channelId)
+                .setMuted(muted)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.updateMutedState(req)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
 
 }

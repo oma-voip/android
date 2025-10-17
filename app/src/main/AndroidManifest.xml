@@ -13,9 +13,12 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
 
     <application
@@ -67,18 +70,16 @@
         </service>
 
         <service
-            android:name=".network.services.voip.VoipConnectionService"
-            android:exported="true"
-            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
+            android:name=".network.services.voip.VoipForegroundService"
+            android:foregroundServiceType="phoneCall|microphone"
+            android:enabled="true"
+            android:exported="false"
+            tools:ignore="ForegroundServicePermission">
             <intent-filter>
-                <action android:name="android.telecom.ConnectionService" />
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
             </intent-filter>
         </service>
 
-        <service
-            android:name=".network.services.voip.VoipForegroundService"
-            android:foregroundServiceType="phoneCall"
-            android:exported="false" />
         <activity
             android:name=".ui.StartUp"
             android:exported="true"

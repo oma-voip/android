@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -17,7 +18,9 @@ import android.os.SystemClock
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import eu.buney.kopus.OpusDecoder
 import eu.buney.kopus.decode
+import eu.buney.kopus.encode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,6 +33,7 @@ import me.sweettie.oma.network.udp.Key
 import me.sweettie.oma.network.udp.Packet
 import me.sweettie.oma.network.udp.UdpClient
 import me.sweettie.oma.network.udp.UdpHeaders
+import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.utils.HexToByteArray
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.startsWith
@@ -42,40 +46,58 @@ class VoipForegroundService : Service() {
     object AudioFragmentManager {
 
         val audios = HashMap<UUID, ArrayList<ShortArray>>()
-        fun addAudio(uuid: UUID, data: ShortArray): Boolean {
+        var isSelfSpeaking = BooleanArray(1) { false }
+        val decoders = HashMap<UUID, OpusDecoder>()
+        fun addAudio(uuid: UUID, data: ShortArray, decoder: OpusDecoder): Boolean {
             val first = audios.isEmpty()
             val r: ArrayList<ShortArray> = audios.getOrDefault(uuid, ArrayList())
             r.add(data)
             audios[uuid] = r
+
+            decoders.put(uuid, decoder)
+
             return first
         }
 
         fun clear() {
             audios.clear()
+            decoders.clear()
         }
+
         private val FRAME_SIZE = 960
+        private val empt = ArrayList<ByteArray>()
         fun getDatas(): ShortArray {
             val buffers = ArrayList<ShortArray>()
             audios.forEach {
                 if (it.value.isNotEmpty())
                     buffers.add(it.value.removeAt(0))
+                else {
+                    decoders[it.key]?.decode(empt[0], 960)
+                }
             }
-            if (buffers.isEmpty()) return ShortArray(FRAME_SIZE).apply { fill(0) }
+            if (buffers.isEmpty()) return ShortArray(960).apply { fill(0) }
             val output = ShortArray(FRAME_SIZE)
             output.fill(0)
 
 
             buffers.forEach {
-                for (i in it.indices) {
-                    if (i < output.size) {
-                        var a: Short = (output[i] + it[i]).toShort()
-                        if (a > Short.Companion.MAX_VALUE) a = Short.Companion.MAX_VALUE
-                        if (a < Short.Companion.MIN_VALUE) a = Short.Companion.MIN_VALUE
-                        output[i] = a
+                try {
+                    for (i in it.indices) {
+                        if (i < output.size) {
+                            var a: Short = (output[i] + it[i]).toShort()
+                            if (a > Short.Companion.MAX_VALUE) a = Short.Companion.MAX_VALUE
+                            if (a < Short.Companion.MIN_VALUE) a = Short.Companion.MIN_VALUE
+                            output[i] = a
+                        }
                     }
+                } catch (_: Exception) {
                 }
             }
             return output
+        }
+
+        fun setSilence(encoded: ByteArray) {
+            empt.add(encoded)
         }
 
     }
@@ -137,11 +159,11 @@ class VoipForegroundService : Service() {
             val distance = event.values[0]
             val max = proximitySensor?.maximumRange ?: 0f
             val isNear = distance < max
-            if (isNear && isConnectedToRelay) {
+            if (isNear && isConnectedToRelay && SessionManager.oldOutputType == 1) {
                 // Прикрыл ухо -> гасим экран
                 try {
                     if (proximityWakeLock != null && proximityWakeLock?.isHeld != true) {
-                        proximityWakeLock?.acquire()
+                        proximityWakeLock?.acquire(10 * 60 * 1000L)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -183,6 +205,8 @@ class VoipForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    private var start = false
+
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -198,6 +222,7 @@ class VoipForegroundService : Service() {
                 intent.getByteArrayExtra(EXTRA_KEY_BYTES)?.let { keyObj = Key(it) }
 
                 startUdp(address)
+
             }
 
             ACTION_STOP -> {
@@ -223,7 +248,9 @@ class VoipForegroundService : Service() {
 
             ACTION_CHANGE_OUTPUT -> {
                 val type = intent.getIntExtra(EXTRA_OUTPUT_TYPE, 0)
-                audioManager?.changeOutputType(type)
+                println("Try to change output type to: $type")
+                if (type != 0)
+                    audioManager?.changeOutputType(type)
             }
         }
         return START_STICKY
@@ -249,13 +276,16 @@ class VoipForegroundService : Service() {
                                 isConnectedToRelay = true
                                 startKeepAlive()
                                 audioManager =
-                                    VoipAudioManager(applicationContext, udpClient!!, keyObj!!)
+                                    VoipAudioManager(applicationContext)
                                 if (ActivityCompat.checkSelfPermission(
                                         applicationContext,
                                         Manifest.permission.RECORD_AUDIO
                                     ) == PackageManager.PERMISSION_GRANTED
                                 ) {
                                     audioManager!!.start()
+                                    serviceScope.launch {
+                                        startCaptureLoop()
+                                    }
                                 }
                                 updateNotification("Connected! Talking...")
                                 startProximityMonitoring()
@@ -290,12 +320,26 @@ class VoipForegroundService : Service() {
                                 println("Suspicious large opus payload: ${opusPayload.size}")
                                 return@launch
                             }
-                            val pcm = audioManager!!.getOrCreateDecoder(senderId!!)!!.decode(
+                            val decoder =
+                                audioManager!!.getOrCreateDecoder(senderId!!) ?: return@launch
+                            val pcm = decoder.decode(
                                 opusPayload,
                                 audioManager!!.frameSize
                             )
-                            AudioFragmentManager.addAudio(senderId, pcm)
-
+                            val f = AudioFragmentManager.addAudio(senderId, pcm, decoder)
+                            if (f) {
+                                val encoded = try {
+                                    audioManager!!.opusEncoder?.encode(ShortArray(960).apply {
+                                        fill(
+                                            0
+                                        )
+                                    }) ?: return@launch
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    return@launch
+                                }
+                                AudioFragmentManager.setSilence(encoded)
+                            }
                         }
 
                         else -> {
@@ -372,16 +416,104 @@ class VoipForegroundService : Service() {
         nm.notify(NOTIF_ID, buildNotification(text))
     }
 
+    private fun createDisconnectAction(): PendingIntent? {
+        val disconnectIntent = Intent(this, VoipForegroundService::class.java).apply {
+            action = ACTION_STOP
+        }
+
+
+        val disconnectPendingIntent = PendingIntent.getService(
+            this,
+            0,
+            disconnectIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return disconnectPendingIntent
+    }
+
+    private fun createNotificationClickIntent(): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            action = "START_ACTIVITY"
+            putExtra("spaceID", spaceUUID.toString())
+            putExtra("channelID", channelUUID.toString())
+        }
+
+        return PendingIntent.getActivity(
+            this,
+            1,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
 
     private fun buildNotification(text: String): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("VoIP Call in progress")
             .setSmallIcon(R.mipmap.svg_icon)
             .setContentText(text)
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                "Disconnect",
+                createDisconnectAction()
+            ) // <-- Добавь кнопку
             .setColor(getColor(R.color.svg_icon_background))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(createNotificationClickIntent())
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .build()
-
     }
+
+
+    private suspend fun startCaptureLoop() {
+        val buffer = ShortArray(audioManager!!.frameSize)
+        while (audioManager!!.running && serviceScope.isActive) {
+            if (SessionManager.muted) {
+                delay(10)
+                AudioFragmentManager.isSelfSpeaking[0] = false
+                continue
+            }
+            var got = 0
+            while (got < audioManager!!.frameSize) {
+                val r =
+                    audioManager!!.audioRecord?.read(buffer, got, audioManager!!.frameSize - got)
+                        ?: 0
+                if (r < 0) break
+                got += r
+            }
+            if (got > 0) {
+                AudioFragmentManager.isSelfSpeaking[0] = true
+                processAndSendAudio(buffer)
+            } else {
+                AudioFragmentManager.isSelfSpeaking[0] = false
+                delay(5)
+            }
+        }
+    }
+
+
+    private suspend fun processAndSendAudio(buffer: ShortArray) {
+        val encoded = try {
+            audioManager!!.opusEncoder?.encode(buffer) ?: return
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return
+        }
+
+        if (encoded.isEmpty()) return
+
+        try {
+            val encrypted = keyObj?.encrypt(UdpHeaders.DATA.s + encoded) ?: return
+            udpClient?.send(encrypted)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
 }
+
+

@@ -27,8 +27,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.network.GrpcClient
+import me.sweettie.oma.ui.home.HomeFragmentDirections
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.SessionState
+import proto.OmaOuterClass
 import kotlin.math.abs
 
 
@@ -49,8 +51,18 @@ class MainActivity : AppCompatActivity() {
                     applicationContext,
                     Manifest.permission.POST_NOTIFICATIONS
                 ) != PackageManager.PERMISSION_GRANTED
+                ||
+                ContextCompat.checkSelfPermission(
+                    applicationContext,
+                    Manifest.permission.WAKE_LOCK
+                ) != PackageManager.PERMISSION_GRANTED
             ) {
-                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
+                requestPermissions(
+                    arrayOf(
+                        Manifest.permission.POST_NOTIFICATIONS,
+                        Manifest.permission.WAKE_LOCK
+                    ), 1001
+                )
             }
         }
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -136,34 +148,26 @@ class MainActivity : AppCompatActivity() {
 
         })
 
-
-//        lifecycleScope.launch {
-//            viewModel.uiState.collect { state ->
-//                println("New state from MainActivity: ${state}")
-//                when (state) {
-//                    is MainViewModel.UiState.VoiceRelayReady -> {
-//                        println("Try to start activity...")
-//                        val vrr = state.voiceRelay
-//                        val connectionUUID = UUID.fromString(vrr.connectionId)
-//                        val spaceUUID = UUID.fromString(vrr.spaceId)
-//                        val channelUUID = UUID.fromString(vrr.channelId)
-//
-//                        val intent = Intent(this@MainActivity, VoipForegroundService::class.java).apply {
-//                            action = VoipForegroundService.ACTION_START
-//                            putExtra(VoipForegroundService.EXTRA_ADDRESS, vrr.address)
-//                            putExtra(VoipForegroundService.EXTRA_CONNECTION_ID, connectionUUID.toString())
-//                            putExtra(VoipForegroundService.EXTRA_SPACE_ID, spaceUUID.toString())
-//                            putExtra(VoipForegroundService.EXTRA_CHANNEL_ID, channelUUID.toString())
-//                            putExtra(VoipForegroundService.EXTRA_KEY_BYTES, vrr.key.toByteArray())
-//                        }
-//                        ContextCompat.startForegroundService(this@MainActivity, intent)
-//                    }
-//
-//                    else -> Unit
-//                }
-//            }
-//        }
-
+        if (intent.action != null) {
+            if (intent.action == "START_ACTIVITY") {
+                val spaceId = intent.getStringExtra("spaceID")
+                val channelId = intent.getStringExtra("channelID")
+                val s = SessionManager.getServerBySpaceId(spaceId!!) ?: return
+                val c = s.hashChannels[channelId!!] ?: return
+                val action = if (c.type.equals(OmaOuterClass.ChannelType.TEXT)) {
+                    HomeFragmentDirections.actionHomeToChat(
+                        channelId = c.id,
+                        serverId = s.space.id
+                    )
+                } else {
+                    HomeFragmentDirections.actionHomeToVoicechat(
+                        channelId = c.id,
+                        serverId = s.space.id
+                    )
+                }
+                navController.navigate(action)
+            }
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

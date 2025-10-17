@@ -1,8 +1,10 @@
 package me.sweettie.oma.utils
 
+import android.app.ActivityManager
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
+import android.content.Context.ACTIVITY_SERVICE
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -20,6 +22,7 @@ import android.provider.MediaStore
 import android.provider.MediaStore.Images
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,9 +31,13 @@ import kotlinx.coroutines.withContext
 import me.sweettie.oma.R
 import me.sweettie.oma.network.GrpcClient
 import proto.OmaOuterClass
+import java.io.BufferedReader
 import java.io.File
 import java.io.FileOutputStream
+import java.io.FileWriter
+import java.io.IOException
 import java.io.InputStream
+import java.io.InputStreamReader
 import kotlin.random.Random
 
 
@@ -305,7 +312,8 @@ object Utils {
 
     fun listOutputDevices(context: Context): List<AudioDeviceInfo> {
         val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        return am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).toList()
+        val devices = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        return devices.filter { it.type != AudioDeviceInfo.TYPE_TELEPHONY }.toList()
     }
 
     fun getDeviceByType(context: Context, type: Int): AudioDeviceInfo? {
@@ -313,5 +321,89 @@ object Utils {
         return am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull { it.type == type }
     }
 
+    fun changeOutputDevice(context: Context): Int {
+        val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val devices = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        val cd = am.communicationDevice
+        if (cd != null) {
+            println("Current AM: ${cd.type}")
+        }
+        for (device in devices) {
+            when (device.type) {
+                AudioDeviceInfo.TYPE_WIRED_HEADSET -> println("Наушники (проводные)")
+                AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> println("Наушники (проводные, без микрофона)")
+                AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> println("Bluetooth (A2DP)")
+                AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> println("Bluetooth (SCO, гарнитура)")
+                AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> println("Встроенный динамик (у уха)")
+                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> println("Встроенный спикер (громкая связь)")
+                AudioDeviceInfo.TYPE_USB_HEADSET -> println("USB-наушники")
+                AudioDeviceInfo.TYPE_USB_DEVICE -> println("USB-устройство")
+                // и другие типы, если нужно
+                else -> println("Неизвестное устройство вывода: ${device.type}")
+            }
+        }
+        var newDevice = 1
+        loop@ for (i in SessionManager.oldOutputType + 1..30) {
+            devices.forEach {
+                if (it.type == i && it.type != 18 && it.type != AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+                    newDevice = it.type
+                    break@loop
+                }
+            }
+        }
+        println("Current: $newDevice")
+
+        return newDevice
+    }
+
+    fun isServiceForegrounded(context: Context, serviceClass: Class<*>): Boolean {
+        val manager = context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
+    }
+
+
+    fun saveLogcatToFile(context: Context, filename: String = "logcat.txt") {
+        val permissionCheck = ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
+
+        if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+            // Запросить разрешение, если нужно
+            println("Нет разрешения на запись")
+            return
+        }
+
+        try {
+            val logFile = File(
+                context.getExternalFilesDir(null),
+                filename
+            ) // Используем.getExternalFilesDir для Android 10+
+
+            val process =
+                Runtime.getRuntime().exec("logcat -d") // -d — вывести текущий буфер и выйти
+            val bufferedReader = BufferedReader(InputStreamReader(process.inputStream))
+
+            val writer = FileWriter(logFile)
+            var line: String?
+
+            while (bufferedReader.readLine().also { line = it } != null) {
+                writer.write(line + "\n")
+            }
+
+            writer.close()
+            bufferedReader.close()
+
+            println("Лог сохранен в: ${logFile.absolutePath}")
+
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+    }
 
 }

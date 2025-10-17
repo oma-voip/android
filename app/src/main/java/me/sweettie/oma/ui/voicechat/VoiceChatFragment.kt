@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
@@ -16,7 +17,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.databinding.FragmentVoiceChatBinding
@@ -27,6 +30,7 @@ import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.main.MainViewModel
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.Utils
+import me.sweettie.oma.utils.Utils.isServiceForegrounded
 import me.sweettie.oma.utils.setOposit
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -93,6 +97,7 @@ class VoiceChatFragment : Fragment() {
                             renderVoiceMembers()
                         }
                     }
+
                     is MainViewModel.UiState.VoiceRelayReady -> {
                         println("Try to start activity...")
                         val vrr = state.voiceRelay
@@ -127,10 +132,6 @@ class VoiceChatFragment : Fragment() {
         }
 
         binding.btnJoinCall.setOnClickListener {
-//            Toast.makeText(context, "Временно недоступно :(", Toast.LENGTH_LONG).show()
-//            return@setOnClickListener
-            //TODO: планирует разблокировка в следующих версиях
-
             if (ActivityCompat.checkSelfPermission(
                     requireContext(),
                     Manifest.permission.RECORD_AUDIO
@@ -141,18 +142,30 @@ class VoiceChatFragment : Fragment() {
                         Manifest.permission.RECORD_AUDIO,
                     ), 123
                 )
-            } else
+            } else {
+                if (SessionManager.startCallTime > 0) {
+                    SessionManager.startCallTime = -1L
+                    val stopIntent =
+                        Intent(requireContext(), VoipForegroundService::class.java).apply {
+                            action = VoipForegroundService.ACTION_STOP
+                        }
+                    requireContext().startService(stopIntent)
+                }
                 startVoiceChat()
+            }
         }
 
         binding.btnHangup.setOnClickListener {
-
+            val isRunning =
+                isServiceForegrounded(requireContext(), VoipForegroundService::class.java)
             changeBottomState()
             SessionManager.startCallTime = -1L
-            val stopIntent = Intent(requireContext(), VoipForegroundService::class.java).apply {
-                action = VoipForegroundService.ACTION_STOP
+            if (isRunning) {
+                val stopIntent = Intent(requireContext(), VoipForegroundService::class.java).apply {
+                    action = VoipForegroundService.ACTION_STOP
+                }
+                requireContext().startService(stopIntent)
             }
-            requireContext().startService(stopIntent)
         }
 
         binding.btnMute.setOnClickListener {
@@ -171,6 +184,9 @@ class VoiceChatFragment : Fragment() {
                         R.drawable.ic_mic_off
                     )
                 )
+            lifecycleScope.launch {
+                GrpcClient.setMuted(args.serverId, args.channelId, SessionManager.muted)
+            }
         }
 
         binding.btnSpeaker.setOnClickListener {
@@ -185,8 +201,12 @@ class VoiceChatFragment : Fragment() {
             }
             requireContext().startService(intent)
         }
-
-
+        val isRunning = isServiceForegrounded(requireContext(), VoipForegroundService::class.java)
+        if (isRunning) {
+            changeBottomState()
+            startCallTimer()
+            startSpeakingIndicatorWorker()
+        }
     }
 
     @Deprecated("Deprecated in Java")
@@ -209,6 +229,7 @@ class VoiceChatFragment : Fragment() {
         changeBottomState()
         SessionManager.startCallTime = System.currentTimeMillis()
         startCallTimer()
+        startSpeakingIndicatorWorker()
     }
 
     @SuppressLint("SetTextI18n")
@@ -255,6 +276,8 @@ class VoiceChatFragment : Fragment() {
                 }
             }.start()
         else {
+            speakingIndicatorJob?.cancel()
+            speakingIndicatorJob = null
             binding.btnMute.animate().alpha(0f).setDuration(200).withEndAction {
                 binding.btnMute.visibility = View.GONE
             }.start()
@@ -274,27 +297,83 @@ class VoiceChatFragment : Fragment() {
 
     }
 
+    private val members = HashMap<UUID, View>()
     private fun renderVoiceMembers() {
         val cm = SessionManager.channelMembers.getOrDefault(args.channelId, ArrayList())
         val inflater = LayoutInflater.from(context)
         binding.voiceGrid.removeAllViews()
+        members.clear()
         cm.forEach {
             val cv = inflater.inflate(R.layout.item_voicemember, binding.voiceGrid, false)
 
             val un = cv.findViewById<TextView>(R.id.tvVoiceChatMemberName)
-            if (SessionManager.selectedServer!!.getMemberById(it.id) != null) {
+            val member = SessionManager.selectedServer!!.getMemberById(it.id)
+            if (member != null) {
                 un.text =
-                    SessionManager.selectedServer!!.getMemberById(it.id)!!.username
+                    member.username
+                members.put(UUID.fromString(member.id), cv)
             } else {
                 Utils.getCacheUser(it.id) { loadedUser ->
                     un.post {
-                        if (loadedUser != null)
+                        if (loadedUser != null) {
                             un.text = loadedUser.username
+                            members.put(UUID.fromString(loadedUser.id), cv)
+                        }
                     }
                 }
             }
-
             binding.voiceGrid.addView(cv)
+        }
+    }
+
+    private var speakingIndicatorJob: Job? = null
+
+    private fun startSpeakingIndicatorWorker() {
+        speakingIndicatorJob?.cancel() // Остановить предыдущий, если был
+
+        speakingIndicatorJob = lifecycleScope.launch {
+            while (isActive) {
+                delay(200) // Обновляем каждые 200 мс, можно изменить на 100 или 300
+
+                members.forEach { (uuid, view) ->
+                    val isSpeaking = if (SessionManager.currentUser!!.id.equals(uuid.toString()))
+                        VoipForegroundService.AudioFragmentManager.isSelfSpeaking[0]
+                    else
+                        VoipForegroundService.AudioFragmentManager.audios[uuid]?.isNotEmpty() == true
+                    val isMuted = SessionManager.mutedStates.getOrDefault(uuid.toString(), false)
+
+                    val imageView = view.findViewById<ImageView>(R.id.tvVoiceChatMemberLogo)
+
+
+                    if (isMuted) {
+                        imageView.setImageDrawable(
+                            AppCompatResources.getDrawable(
+                                requireContext(),
+                                R.drawable.ic_mic_off
+                            )
+                        )
+                    } else {
+                        imageView.setImageDrawable(
+                            AppCompatResources.getDrawable(
+                                requireContext(),
+                                R.drawable.ic_member
+                            )
+                        )
+                    }
+
+
+                    val newTint = if (isSpeaking) {
+                        ContextCompat.getColor(
+                            requireContext(),
+                            R.color.colorMoreContrastBackground
+                        )
+                    } else {
+                        ContextCompat.getColor(requireContext(), R.color.white)
+                    }
+
+                    imageView.setColorFilter(newTint, android.graphics.PorterDuff.Mode.SRC_IN)
+                }
+            }
         }
     }
 }

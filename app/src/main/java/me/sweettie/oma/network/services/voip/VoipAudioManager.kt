@@ -1,9 +1,9 @@
 package me.sweettie.oma.network.services.voip
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
@@ -13,42 +13,30 @@ import androidx.annotation.RequiresPermission
 import eu.buney.kopus.OpusApplication
 import eu.buney.kopus.OpusDecoder
 import eu.buney.kopus.OpusEncoder
-import eu.buney.kopus.encode
 import eu.buney.kopus.setDTX
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import me.sweettie.oma.network.udp.Key
-import me.sweettie.oma.network.udp.UdpClient
-import me.sweettie.oma.network.udp.UdpHeaders
-import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.Utils.getDeviceByType
 import java.util.UUID
 
-class VoipAudioManager(
-    private val context: Context,
-    private val udpClient: UdpClient,
-    private val key: Key
-) {
+class VoipAudioManager(private val context: Context) {
 
     private val sampleRate = 48000
     private val channels = 1
     val frameSize = 960
 
-    private var audioRecord: AudioRecord? = null
+    var audioRecord: AudioRecord? = null
     private var audioTrack: AudioTrack? = null
-    private var opusEncoder: OpusEncoder? = null
+    var opusEncoder: OpusEncoder? = null
 
     @Volatile
-    private var running = false
+    var running = false
 
-    // Корутины
     val audioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
 
     private fun startProcessingLoops() {
         audioScope.launch {
@@ -59,11 +47,10 @@ class VoipAudioManager(
 
     private val decoders = java.util.concurrent.ConcurrentHashMap<UUID, OpusDecoder>()
 
-    var add = false
     fun getOrCreateDecoder(uuid: UUID): OpusDecoder? {
         decoders[uuid]?.let { return it }
         synchronized(decoders) {
-            decoders[uuid]?.let { return it } // re-check
+            decoders[uuid]?.let { return it }
             return try {
                 val d = OpusDecoder(sampleRate, channels)
                 decoders[uuid] = d
@@ -96,6 +83,7 @@ class VoipAudioManager(
         if (running) return
         running = true
 
+
         setAudioMode(true)
         initOpus()
         startAudioDevices()
@@ -103,9 +91,6 @@ class VoipAudioManager(
         startProcessingLoops()
 
 
-        audioScope.launch {
-            startCaptureLoop()
-        }
     }
 
     fun stop() {
@@ -222,13 +207,20 @@ class VoipAudioManager(
         audioTrack = null
     }
 
-    @SuppressLint("NewApi")
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun changeOutputType(type: Int) {
         val dev = getDeviceByType(context, type)
         val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        if (dev?.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) {
+            // Попробуй включить Bluetooth SCO для разговора, если возможно
+            am.isBluetoothScoOn = true
+            am.startBluetoothSco()
+        }
+
         am.mode = AudioManager.MODE_IN_COMMUNICATION
-        dev?.let { am.setCommunicationDevice(it) }
+        dev?.let {
+            am.setCommunicationDevice(it)
+        }
     }
 
     private fun setAudioMode(enable: Boolean) {
@@ -240,45 +232,6 @@ class VoipAudioManager(
         }
     }
 
-    private suspend fun startCaptureLoop() {
-        val buffer = ShortArray(frameSize)
-        while (running && audioScope.isActive) {
-            if (SessionManager.muted) {
-                delay(10)
-                continue
-            }
-            var got = 0
-            while (got < frameSize) {
-                val r = audioRecord?.read(buffer, got, frameSize - got) ?: 0
-                if (r < 0) break
-                got += r
-            }
-            if (got > 0) {
-                processAndSendAudio(buffer)
-            } else {
-                delay(5)
-            }
-        }
-    }
-
-
-    private suspend fun processAndSendAudio(buffer: ShortArray) {
-        val encoded = try {
-            opusEncoder?.encode(buffer) ?: return
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return
-        }
-
-        if (encoded.isEmpty()) return
-
-        try {
-            val encrypted = key.encrypt(UdpHeaders.DATA.s + encoded)
-            udpClient.send(encrypted)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
 
 
 }

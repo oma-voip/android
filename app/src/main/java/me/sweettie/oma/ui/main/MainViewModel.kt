@@ -111,6 +111,11 @@ class MainViewModel : ViewModel() {
                 _uiState.value = UiState.ChannelMembers(event.channelMembers)
             }
 
+            OmaOuterClass.Event.EventCase.MUTEDSTATEUPDATED -> {
+                val state = event.mutedStateUpdated
+                SessionManager.mutedStates[state.userId] = state.muted
+            }
+
             OmaOuterClass.Event.EventCase.KEEPALIVE -> {}
 
             else -> {
