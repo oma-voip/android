@@ -63,11 +63,13 @@ class VoipForegroundService : Service() {
             val output = ShortArray(FRAME_SIZE) { 0 }
 
 
-//            println("In one array: ${buffers.size} rows")  перестаёт индексироваться код при отладке по LogCat
             buffers.forEach {
                 for (i in it.indices) {
                     if (i < output.size) {
-                        output[i] = (output[i] + it[i]).toShort()
+                        var a: Short = (output[i] + it[i]).toShort()
+                        if (a > Short.Companion.MAX_VALUE) a = Short.Companion.MAX_VALUE
+                        if (a < Short.Companion.MIN_VALUE) a = Short.Companion.MIN_VALUE
+                        output[i] = a
                     }
                 }
             }
@@ -281,17 +283,13 @@ class VoipForegroundService : Service() {
                                 println("Suspicious large opus payload: ${opusPayload.size}")
                                 return@launch
                             }
-//                            println("UUID of speaker: ${senderId}")
-//                            audioManager!!.onReceiveLoop(opusPayload)
-                            val pcm = audioManager!!.opusDecoder?.decode(
+                            println("UUID of speaker: ${senderId}")
+                            val pcm = audioManager!!.getOrCreateDecoder(senderId!!)!!.decode(
                                 opusPayload,
                                 audioManager!!.frameSize
                             )
-                            if (pcm == null)
-                                return@launch
-                            val r = AudioFragmentManager.addAudio(senderId!!, pcm)
-                            if (r)
-                                audioManager!!.tryEnqueueOpusPayload()
+                            AudioFragmentManager.addAudio(senderId, pcm)
+
                         }
 
                         else -> {

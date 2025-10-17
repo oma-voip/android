@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -41,6 +42,7 @@ class VoipAudioManager(
         val timestamp: Long = SystemClock.elapsedRealtime()
     )
 
+    private val incomingFrames = Channel<AudioFrame>(256)
     private val sampleRate = 48000
     private val channels = 1
     val frameSize = 960
@@ -65,9 +67,39 @@ class VoipAudioManager(
 
     }
 
+    private val decoders = java.util.concurrent.ConcurrentHashMap<UUID, OpusDecoder>()
 
+    var add = false
+    fun getOrCreateDecoder(uuid: UUID): OpusDecoder? {
+
+
+        decoders[uuid]?.let { return it }
+
+        // синхронизируем по map-key чтобы не создавать одновременно несколько
+        synchronized(decoders) {
+            decoders[uuid]?.let { return it } // re-check
+            return try {
+                val d = OpusDecoder(sampleRate, channels)
+                decoders[uuid] = d
+                println("создаём decoder для $uuid")
+                d
+            } catch (e: Throwable) {
+                null
+            }
+        }
+    }
+
+    private fun destroyAllDecoders() {
+        for ((_, d) in decoders) {
+            try {
+                d.close()
+            } catch (_: Exception) {
+            }
+        }
+        decoders.clear()
+    }
     private suspend fun playoutLoop() {
-        while (running) {
+        while (running && audioScope.isActive) {
             val pkt = VoipForegroundService.AudioFragmentManager.getDatas()
             audioTrack?.write(pkt, 0, pkt.size)
         }
@@ -94,10 +126,10 @@ class VoipAudioManager(
     fun stop() {
         running = false
 
-//        try {
-//            incomingFrames.close()
-//        } catch (_: Exception) {
-//        }
+        try {
+            incomingFrames.close()
+        } catch (_: Exception) {
+        }
 
         audioScope.cancel()
 
@@ -123,7 +155,15 @@ class VoipAudioManager(
             e.printStackTrace()
             null
         }
-
+        pp = Pair(
+            OpusDecoder(
+                sampleRate = sampleRate,
+                channels = channels
+            ), OpusDecoder(
+                sampleRate = sampleRate,
+                channels = channels
+            )
+        )
         opusDecoder = try {
             OpusDecoder(
                 sampleRate = sampleRate,
@@ -135,6 +175,7 @@ class VoipAudioManager(
         }
     }
 
+    lateinit var pp: Pair<OpusDecoder, OpusDecoder>
     private fun destroyOpus() {
         try {
             opusEncoder?.close()
@@ -282,20 +323,6 @@ class VoipAudioManager(
         } catch (e: Exception) {
             e.printStackTrace()
         }
-    }
-
-    suspend fun enqueueOpusPayload(senderId: UUID, payload: ByteArray) {
-        if (payload.isEmpty() || !running) return
-        try {
-//            val pcm = opusDecoder?.decode(payload, frameSize) ?: return
-//            incomingFrames.send(AudioFrame(senderId, pcm))
-        } catch (e: Exception) {
-            // Канал закрыт или переполнен
-        }
-    }
-
-    fun tryEnqueueOpusPayload() {
-//        incomingFrames.trySend()
     }
 
 
