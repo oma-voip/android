@@ -46,4 +46,5 @@
     <string name="copy">Copy to clipboard</string>
     <string name="delete">Delete</string>
     <string name="recent_files">Recent files</string>
+    <string name="change_output">change output</string>
 </resources>

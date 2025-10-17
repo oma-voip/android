@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import proto.OmaOuterClass
 import java.nio.ByteBuffer
@@ -46,6 +47,12 @@ fun EditText.isPresent(): Boolean {
 
 fun EditText.getEndText(): String {
     return this.text.toString()
+}
+
+fun ByteArray.startsWith(prefix: ByteArray): Boolean {
+    if (this.size < prefix.size) return false
+    for (i in prefix.indices) if (this[i] != prefix[i]) return false
+    return true
 }
 
 fun Fragment.hideKeyboard() {
@@ -106,7 +113,7 @@ fun OmaOuterClass.Attachment.isImage(): Boolean {
 fun Int.toPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
 
 fun View.setOposit() {
-    this.visibility = if (this.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+    this.visibility = if (this.isVisible) View.GONE else View.VISIBLE
 }
 
 fun UUID.toByteArray(size: Int = 16): ByteArray {

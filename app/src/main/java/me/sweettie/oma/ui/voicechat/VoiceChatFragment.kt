@@ -1,13 +1,17 @@
 package me.sweettie.oma.ui.voicechat
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -16,11 +20,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.databinding.FragmentVoiceChatBinding
+import me.sweettie.oma.network.GrpcClient
+import me.sweettie.oma.network.services.voip.VoipForegroundService
 import me.sweettie.oma.ui.chat.ChatFragmentArgs
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.main.MainViewModel
 import me.sweettie.oma.utils.SessionManager
+import me.sweettie.oma.utils.Utils
 import me.sweettie.oma.utils.setOposit
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 
@@ -85,6 +93,33 @@ class VoiceChatFragment : Fragment() {
                             renderVoiceMembers()
                         }
                     }
+                    is MainViewModel.UiState.VoiceRelayReady -> {
+                        println("Try to start activity...")
+                        val vrr = state.voiceRelay
+                        val connectionUUID = UUID.fromString(vrr.connectionId)
+                        val spaceUUID = UUID.fromString(vrr.spaceId)
+                        val channelUUID = UUID.fromString(vrr.channelId)
+
+                        val intent =
+                            Intent(requireContext(), VoipForegroundService::class.java).apply {
+                                action = VoipForegroundService.ACTION_START
+                                putExtra(VoipForegroundService.EXTRA_ADDRESS, vrr.address)
+                                putExtra(
+                                    VoipForegroundService.EXTRA_CONNECTION_ID,
+                                    connectionUUID.toString()
+                                )
+                                putExtra(VoipForegroundService.EXTRA_SPACE_ID, spaceUUID.toString())
+                                putExtra(
+                                    VoipForegroundService.EXTRA_CHANNEL_ID,
+                                    channelUUID.toString()
+                                )
+                                putExtra(
+                                    VoipForegroundService.EXTRA_KEY_BYTES,
+                                    vrr.key.toByteArray()
+                                )
+                            }
+                        ContextCompat.startForegroundService(requireContext(), intent)
+                    }
 
                     else -> Unit
                 }
@@ -92,23 +127,32 @@ class VoiceChatFragment : Fragment() {
         }
 
         binding.btnJoinCall.setOnClickListener {
-            Toast.makeText(context, "Временно недоступно :(", Toast.LENGTH_LONG).show()
-            return@setOnClickListener
+//            Toast.makeText(context, "Временно недоступно :(", Toast.LENGTH_LONG).show()
+//            return@setOnClickListener
             //TODO: планирует разблокировка в следующих версиях
-//            lifecycleScope.launch {
-//                GrpcClient.getVoiceRequest(args.serverId, args.channelId)
-//            }
-//
-//            changeBottomState()
-//            SessionManager.startCallTime = System.currentTimeMillis()
-//            startCallTimer()
+
+            if (ActivityCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.RECORD_AUDIO
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                this@VoiceChatFragment.requestPermissions(
+                    arrayOf(
+                        Manifest.permission.RECORD_AUDIO,
+                    ), 123
+                )
+            } else
+                startVoiceChat()
         }
 
         binding.btnHangup.setOnClickListener {
-            //TODO: end call
 
             changeBottomState()
             SessionManager.startCallTime = -1L
+            val stopIntent = Intent(requireContext(), VoipForegroundService::class.java).apply {
+                action = VoipForegroundService.ACTION_STOP
+            }
+            requireContext().startService(stopIntent)
         }
 
         binding.btnMute.setOnClickListener {
@@ -129,7 +173,42 @@ class VoiceChatFragment : Fragment() {
                 )
         }
 
+        binding.btnSpeaker.setOnClickListener {
+            val v = if (SessionManager.oldOutputType == 1) 2 else 1
+            Utils.listOutputDevices(requireContext()).forEach {
+                println("${it.id} | ${it.productName} | ${it.type}")
+            }
+            val intent = Intent(context, VoipForegroundService::class.java).apply {
+                action = VoipForegroundService.ACTION_CHANGE_OUTPUT
+                putExtra(VoipForegroundService.EXTRA_OUTPUT_TYPE, v)
+                SessionManager.oldOutputType = v
+            }
+            requireContext().startService(intent)
+        }
 
+
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String?>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 123 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            startVoiceChat()
+        }
+    }
+
+    fun startVoiceChat() {
+        lifecycleScope.launch {
+            GrpcClient.getVoiceRequest(args.serverId, args.channelId)
+        }
+
+        changeBottomState()
+        SessionManager.startCallTime = System.currentTimeMillis()
+        startCallTimer()
     }
 
     @SuppressLint("SetTextI18n")
@@ -160,6 +239,7 @@ class VoiceChatFragment : Fragment() {
                     binding.btnMute.alpha = 0f
                     binding.btnHangup.alpha = 0f
                     binding.tvCallTime.alpha = 0f
+                    binding.btnSpeaker.alpha = 0f
                     binding.btnMute.animate().alpha(1f).setDuration(200).withStartAction {
                         binding.btnMute.visibility = View.VISIBLE
                     }.start()
@@ -169,6 +249,9 @@ class VoiceChatFragment : Fragment() {
                     binding.tvCallTime.animate().alpha(1f).setDuration(200).withStartAction {
                         binding.tvCallTime.visibility = View.VISIBLE
                     }.start()
+                    binding.btnSpeaker.animate().alpha(1f).setDuration(200).withStartAction {
+                        binding.btnSpeaker.visibility = View.VISIBLE
+                    }.start()
                 }
             }.start()
         else {
@@ -177,6 +260,9 @@ class VoiceChatFragment : Fragment() {
             }.start()
             binding.btnHangup.animate().alpha(0f).setDuration(200).withEndAction {
                 binding.btnHangup.visibility = View.GONE
+            }.start()
+            binding.btnSpeaker.animate().alpha(0f).setDuration(200).withEndAction {
+                binding.btnSpeaker.visibility = View.GONE
             }.start()
             binding.tvCallTime.animate().alpha(0f).setDuration(200).withEndAction {
                 binding.tvCallTime.visibility = View.GONE
@@ -194,8 +280,20 @@ class VoiceChatFragment : Fragment() {
         binding.voiceGrid.removeAllViews()
         cm.forEach {
             val cv = inflater.inflate(R.layout.item_voicemember, binding.voiceGrid, false)
-            (cv.findViewById<TextView>(R.id.tvVoiceChatMemberName)).text =
-                SessionManager.selectedServer!!.getMemberById(it.id)!!.username
+
+            val un = cv.findViewById<TextView>(R.id.tvVoiceChatMemberName)
+            if (SessionManager.selectedServer!!.getMemberById(it.id) != null) {
+                un.text =
+                    SessionManager.selectedServer!!.getMemberById(it.id)!!.username
+            } else {
+                Utils.getCacheUser(it.id) { loadedUser ->
+                    un.post {
+                        if (loadedUser != null)
+                            un.text = loadedUser.username
+                    }
+                }
+            }
+
             binding.voiceGrid.addView(cv)
         }
     }

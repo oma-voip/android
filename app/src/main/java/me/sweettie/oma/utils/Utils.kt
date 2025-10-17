@@ -12,6 +12,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.Shader
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -300,4 +302,16 @@ object Utils {
             null
         }
     }
+
+    fun listOutputDevices(context: Context): List<AudioDeviceInfo> {
+        val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        return am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).toList()
+    }
+
+    fun getDeviceByType(context: Context, type: Int): AudioDeviceInfo? {
+        val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        return am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull { it.type == type }
+    }
+
+
 }
