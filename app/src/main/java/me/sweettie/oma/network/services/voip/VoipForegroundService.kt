@@ -5,7 +5,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.Sensor
@@ -43,7 +42,6 @@ class VoipForegroundService : Service() {
     object AudioFragmentManager {
 
         val audios = HashMap<UUID, ArrayList<ShortArray>>()
-
         fun addAudio(uuid: UUID, data: ShortArray): Boolean {
             val first = audios.isEmpty()
             val r: ArrayList<ShortArray> = audios.getOrDefault(uuid, ArrayList())
@@ -52,6 +50,9 @@ class VoipForegroundService : Service() {
             return first
         }
 
+        fun clear() {
+            audios.clear()
+        }
         private val FRAME_SIZE = 960
         fun getDatas(): ShortArray {
             val buffers = ArrayList<ShortArray>()
@@ -59,8 +60,9 @@ class VoipForegroundService : Service() {
                 if (it.value.isNotEmpty())
                     buffers.add(it.value.removeAt(0))
             }
-            if (buffers.isEmpty()) return ShortArray(FRAME_SIZE) { 0 }
-            val output = ShortArray(FRAME_SIZE) { 0 }
+            if (buffers.isEmpty()) return ShortArray(FRAME_SIZE).apply { fill(0) }
+            val output = ShortArray(FRAME_SIZE)
+            output.fill(0)
 
 
             buffers.forEach {
@@ -116,7 +118,7 @@ class VoipForegroundService : Service() {
         createNotificationChannel()
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
-        powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        powerManager = getSystemService(POWER_SERVICE) as PowerManager
         try {
             proximityWakeLock = powerManager.newWakeLock(
                 PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
@@ -186,6 +188,7 @@ class VoipForegroundService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 startForeground(NOTIF_ID, buildNotification("Starting VoIP relay..."))
+                AudioFragmentManager.clear()
 
                 val address = intent.getStringExtra(EXTRA_ADDRESS) ?: return START_NOT_STICKY
                 intent.getStringExtra(EXTRA_CONNECTION_ID)
@@ -205,7 +208,11 @@ class VoipForegroundService : Service() {
                     e.printStackTrace()
                 }
                 try {
-                    udpClient?.stop()
+                    serviceScope.launch {
+                        val encrypted = keyObj!!.encrypt(UdpHeaders.DISCONNECT_MESSAGE.s)
+                        udpClient?.send(encrypted)
+                        udpClient?.stop()
+                    }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -233,7 +240,7 @@ class VoipForegroundService : Service() {
                 try {
                     val decrypted = try {
                         keyObj?.decrypt(data) ?: data
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         data
                     }
                     when {
@@ -283,7 +290,6 @@ class VoipForegroundService : Service() {
                                 println("Suspicious large opus payload: ${opusPayload.size}")
                                 return@launch
                             }
-                            println("UUID of speaker: ${senderId}")
                             val pcm = audioManager!!.getOrCreateDecoder(senderId!!)!!.decode(
                                 opusPayload,
                                 audioManager!!.frameSize
@@ -295,7 +301,7 @@ class VoipForegroundService : Service() {
                         else -> {
                             val text = try {
                                 String(decrypted, Charsets.UTF_8)
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 "<binary ${decrypted.size}b>"
                             }
                             updateNotification("Received: ${text.take(80)}")

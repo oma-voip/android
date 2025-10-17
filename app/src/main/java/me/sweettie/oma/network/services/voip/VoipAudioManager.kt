@@ -1,6 +1,7 @@
 package me.sweettie.oma.network.services.voip
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
@@ -8,7 +9,6 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
-import android.os.SystemClock
 import androidx.annotation.RequiresPermission
 import eu.buney.kopus.OpusApplication
 import eu.buney.kopus.OpusDecoder
@@ -19,7 +19,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -36,13 +35,6 @@ class VoipAudioManager(
     private val key: Key
 ) {
 
-    data class AudioFrame(
-        val senderId: UUID,
-        val pcm: ShortArray,
-        val timestamp: Long = SystemClock.elapsedRealtime()
-    )
-
-    private val incomingFrames = Channel<AudioFrame>(256)
     private val sampleRate = 48000
     private val channels = 1
     val frameSize = 960
@@ -50,9 +42,7 @@ class VoipAudioManager(
     private var audioRecord: AudioRecord? = null
     private var audioTrack: AudioTrack? = null
     private var opusEncoder: OpusEncoder? = null
-    var opusDecoder: OpusDecoder? = null
 
-    // Состояние
     @Volatile
     private var running = false
 
@@ -71,19 +61,14 @@ class VoipAudioManager(
 
     var add = false
     fun getOrCreateDecoder(uuid: UUID): OpusDecoder? {
-
-
         decoders[uuid]?.let { return it }
-
-        // синхронизируем по map-key чтобы не создавать одновременно несколько
         synchronized(decoders) {
             decoders[uuid]?.let { return it } // re-check
             return try {
                 val d = OpusDecoder(sampleRate, channels)
                 decoders[uuid] = d
-                println("создаём decoder для $uuid")
                 d
-            } catch (e: Throwable) {
+            } catch (_: Throwable) {
                 null
             }
         }
@@ -98,7 +83,7 @@ class VoipAudioManager(
         }
         decoders.clear()
     }
-    private suspend fun playoutLoop() {
+    private fun playoutLoop() {
         while (running && audioScope.isActive) {
             val pkt = VoipForegroundService.AudioFragmentManager.getDatas()
             audioTrack?.write(pkt, 0, pkt.size)
@@ -125,14 +110,7 @@ class VoipAudioManager(
 
     fun stop() {
         running = false
-
-        try {
-            incomingFrames.close()
-        } catch (_: Exception) {
-        }
-
         audioScope.cancel()
-
         stopAudioDevices()
         destroyOpus()
         setAudioMode(false)
@@ -155,27 +133,8 @@ class VoipAudioManager(
             e.printStackTrace()
             null
         }
-        pp = Pair(
-            OpusDecoder(
-                sampleRate = sampleRate,
-                channels = channels
-            ), OpusDecoder(
-                sampleRate = sampleRate,
-                channels = channels
-            )
-        )
-        opusDecoder = try {
-            OpusDecoder(
-                sampleRate = sampleRate,
-                channels = channels
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
     }
 
-    lateinit var pp: Pair<OpusDecoder, OpusDecoder>
     private fun destroyOpus() {
         try {
             opusEncoder?.close()
@@ -184,12 +143,7 @@ class VoipAudioManager(
         }
         opusEncoder = null
 
-        try {
-            opusDecoder?.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        opusDecoder = null
+        destroyAllDecoders()
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -268,6 +222,7 @@ class VoipAudioManager(
         audioTrack = null
     }
 
+    @SuppressLint("NewApi")
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun changeOutputType(type: Int) {
         val dev = getDeviceByType(context, type)
