@@ -16,6 +16,7 @@ enum class SessionState {
 
 object SessionManager {
 
+    var oldOutputType: Int = 1
     lateinit var updateInfo: VersionInfo
     var startCallTime: Long = -1L
     var selectedServer: Server? = null

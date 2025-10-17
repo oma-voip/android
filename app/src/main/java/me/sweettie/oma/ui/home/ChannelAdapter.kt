@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import me.sweettie.oma.R
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.utils.SessionManager
+import me.sweettie.oma.utils.Utils
 import me.sweettie.oma.utils.getById
 import me.sweettie.oma.utils.setStartDrawable
 import proto.OmaOuterClass
@@ -102,8 +103,19 @@ class ChannelAdapter(
             val inflater = LayoutInflater.from(holder.memberList.context)
             cm.forEach {
                 val ml = inflater.inflate(R.layout.item_member, holder.memberList, false)
-                ml.findViewById<TextView>(R.id.tvMemberName).text =
-                    server!!.members.getById(it.id)!!.username
+                val un = ml.findViewById<TextView>(R.id.tvMemberName)
+                if (server!!.members.getById(it.id) != null) {
+                    un.text =
+                        server!!.members.getById(it.id)!!.username
+                } else {
+                    Utils.getCacheUser(it.id) { loadedUser ->
+                        un.post {
+                            if (loadedUser != null)
+                                un.text = loadedUser.username
+                        }
+                    }
+                }
+
                 holder.memberList.addView(ml)
             }
             holder.memberList.visibility = View.VISIBLE

@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
@@ -13,14 +12,8 @@ import kotlinx.coroutines.launch
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.network.EventRepository
 import me.sweettie.oma.network.GrpcClient
-import me.sweettie.oma.network.udp.Key
-import me.sweettie.oma.network.udp.Packet
-import me.sweettie.oma.network.udp.UdpClient
-import me.sweettie.oma.utils.HexToByteArray
 import me.sweettie.oma.utils.SessionManager
-import me.sweettie.oma.utils.toByteArray
 import proto.OmaOuterClass
-import java.util.UUID
 
 class MainViewModel : ViewModel() {
 
@@ -42,35 +35,8 @@ class MainViewModel : ViewModel() {
         when (event.eventCase) {
 
             OmaOuterClass.Event.EventCase.VOICERELAYREADY -> {
-                val vrr = event.voiceRelayReady
-                val connectionUUID = UUID.fromString(vrr.connectionId)
-                val spaceUUID = UUID.fromString(vrr.spaceId)
-                val channelUUID = UUID.fromString(vrr.channelId)
-                val key = Key(vrr.key.toByteArray())
-                val pairData = UdpClient.parseAddress(vrr.address)
-                val udp = UdpClient(pairData.first, pairData.second)
-                udp.startListening { data, i ->
-                    val message = data.toString(Charsets.UTF_8)
-                    println("Received: $message")
-                }
-
-                CoroutineScope(Dispatchers.IO).launch {
-                    delay(2000)
-                    println("2")
-                    // todo: декодировать токен (являющийся хекс строкой) (длинна 32 байта)
-                    val packet = Packet.connectPacket(
-                        connectionUUID.toByteArray(),
-                        key.encrypt(SessionManager.token!!.HexToByteArray() + spaceUUID.toByteArray() + channelUUID.toByteArray())
-                    )
-                    udp.send(packet)
-                    println("2")
-                    delay(2000)
-                    println("SOcket: " + udp.socket!!.isConnected)
-
-                }
-
-
                 println("+ VOICE_RELEY_READY | Space = ${event.voiceRelayReady.spaceId} | Peer id = ${event.voiceRelayReady.channelId} | Addr. = ${event.voiceRelayReady.address} | Key = ${event.voiceRelayReady.key}")
+                _uiState.value = UiState.VoiceRelayReady(event.voiceRelayReady)
             }
 
             OmaOuterClass.Event.EventCase.ONLINESTATEUPDATED -> {
@@ -125,14 +91,14 @@ class MainViewModel : ViewModel() {
                 println("🚪 CHANNEL_LEFT: ${channel.channelId}")
                 val t = SessionManager.channelMembers.getOrDefault(channel.channelId, ArrayList())
                 var deleted = false
-                t.forEach {
-                    if (it.id.equals(channel.userId)) {
-                        t.remove(it)
+                val iter = t.iterator()
+                while (iter.hasNext()) {
+                    val member = iter.next()
+                    if (member.id == channel.userId) {
+                        iter.remove()
                         deleted = true
-                        return@forEach
                     }
                 }
-
                 if (deleted) {
                     SessionManager.channelMembers[channel.channelId] = t
                 }
@@ -161,5 +127,6 @@ class MainViewModel : ViewModel() {
         data class ChannelJoined(val channel: OmaOuterClass.ChannelJoined) : UiState()
         data class ChannelLeft(val channel: OmaOuterClass.ChannelLeft) : UiState()
         data class ChannelMembers(val channelMembers: OmaOuterClass.ChannelMembers) : UiState()
+        data class VoiceRelayReady(val voiceRelay: OmaOuterClass.VoiceRelayReady) : UiState()
     }
 }

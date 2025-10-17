@@ -28,11 +28,10 @@ class UdpClient(
 
     private var receiveJob: Job? = null
 
-    /** Запускает сокет и начинает слушать входящие пакеты */
     fun startListening(onReceive: (ByteArray, Int) -> Unit) {
-        if (receiveJob?.isActive == true) return  // уже слушаем
+        if (receiveJob?.isActive == true) return
 
-        socket = DatagramSocket() // bind к случайному порту
+        socket = DatagramSocket()
 
         receiveJob = launch {
             val buf = ByteArray(bufferSize)
@@ -40,11 +39,10 @@ class UdpClient(
             try {
                 while (isActive) {
                     socket?.receive(packet)
-                    val data = packet.data.copyOf(packet.length) // точные данные
+                    val data = packet.data.copyOf(packet.length)
                     onReceive(data, packet.length)
                 }
             } catch (e: Exception) {
-                // Обработка ошибок при получении
                 if (e !is CancellationException) {
                     e.printStackTrace()
                 }

@@ -11,17 +11,15 @@ class Key(
     val gcmSpecNonceSize: Int = 12
 ) {
     private val secretKey: SecretKey = SecretKeySpec(source, "AES")
-    private val cipherEncrypt = Cipher.getInstance("AES/GCM/NoPadding")
-    private val cipherDecrypt = Cipher.getInstance("AES/GCM/NoPadding")
-
     private val secureRandom = SecureRandom()
 
     fun encrypt(packet: ByteArray): ByteArray {
         val nonce = ByteArray(gcmSpecNonceSize)
         secureRandom.nextBytes(nonce)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         val spec = GCMParameterSpec(128, nonce)
-        cipherEncrypt.init(Cipher.ENCRYPT_MODE, secretKey, spec)
-        val encrypted = cipherEncrypt.doFinal(packet)
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec)
+        val encrypted = cipher.doFinal(packet)
         return nonce + encrypted
     }
 
@@ -29,8 +27,9 @@ class Key(
         require(data.size > gcmSpecNonceSize) { "Data too short" }
         val nonce = data.copyOfRange(0, gcmSpecNonceSize)
         val cipherText = data.copyOfRange(gcmSpecNonceSize, data.size)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         val spec = GCMParameterSpec(128, nonce)
-        cipherDecrypt.init(Cipher.DECRYPT_MODE, secretKey, spec)
-        return cipherDecrypt.doFinal(cipherText)
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
+        return cipher.doFinal(cipherText)
     }
 }

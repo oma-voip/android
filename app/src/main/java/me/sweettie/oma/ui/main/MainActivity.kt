@@ -38,6 +38,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var gestureDetector: GestureDetectorCompat
     private val swipeDistance = 300
     private val swipeVelocity = 100
+    private lateinit var viewModel: MainViewModel
+
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -134,6 +136,33 @@ class MainActivity : AppCompatActivity() {
 
         })
 
+
+//        lifecycleScope.launch {
+//            viewModel.uiState.collect { state ->
+//                println("New state from MainActivity: ${state}")
+//                when (state) {
+//                    is MainViewModel.UiState.VoiceRelayReady -> {
+//                        println("Try to start activity...")
+//                        val vrr = state.voiceRelay
+//                        val connectionUUID = UUID.fromString(vrr.connectionId)
+//                        val spaceUUID = UUID.fromString(vrr.spaceId)
+//                        val channelUUID = UUID.fromString(vrr.channelId)
+//
+//                        val intent = Intent(this@MainActivity, VoipForegroundService::class.java).apply {
+//                            action = VoipForegroundService.ACTION_START
+//                            putExtra(VoipForegroundService.EXTRA_ADDRESS, vrr.address)
+//                            putExtra(VoipForegroundService.EXTRA_CONNECTION_ID, connectionUUID.toString())
+//                            putExtra(VoipForegroundService.EXTRA_SPACE_ID, spaceUUID.toString())
+//                            putExtra(VoipForegroundService.EXTRA_CHANNEL_ID, channelUUID.toString())
+//                            putExtra(VoipForegroundService.EXTRA_KEY_BYTES, vrr.key.toByteArray())
+//                        }
+//                        ContextCompat.startForegroundService(this@MainActivity, intent)
+//                    }
+//
+//                    else -> Unit
+//                }
+//            }
+//        }
 
     }
 

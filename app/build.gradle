@@ -93,6 +93,7 @@ dependencies {
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     implementation 'com.davemorrissey.labs:subsampling-scale-image-view-androidx:3.10.0'
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
+    implementation("eu.buney.kopus:kopus:1.5.2")
 
 }
 

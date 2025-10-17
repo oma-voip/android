@@ -106,6 +106,7 @@
         android:layout_marginEnd="@dimen/x2_def_padding"
         android:layout_marginBottom="@dimen/x3_def_padding"
         app:cardBackgroundColor="@color/colorUserBarBackground"
+        app:strokeColor="@color/transparent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -141,6 +142,18 @@
                 android:contentDescription="@string/mute"
                 android:visibility="gone"
                 app:tint="@color/white" />
+
+            <ImageButton
+                android:id="@+id/btn_speaker"
+                android:layout_width="@dimen/status_bar_height"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_volume"
+                android:contentDescription="@string/change_output"
+                android:visibility="gone"
+                app:tint="@color/white" />
+
 
             <ImageButton
                 android:id="@+id/btn_hangup"

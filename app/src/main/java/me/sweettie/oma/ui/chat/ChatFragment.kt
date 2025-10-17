@@ -172,7 +172,7 @@ class ChatFragment : Fragment() {
         binding.sendBtn.isEnabled = true
 
         binding.sendBtn.setOnClickListener {
-            if (!binding.messageBox.isPresent())
+            if (!binding.messageBox.isPresent() && AttachmentStorage.getSelectedFiles().isEmpty())
                 return@setOnClickListener
             val message = binding.messageBox.getEndText()
             sendMessageWithAttachemnts(message)
