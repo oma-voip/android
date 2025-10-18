@@ -1,8 +1,5 @@
 package me.sweettie.oma.network
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -12,9 +9,11 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
+import me.sweettie.oma.utils.SessionManager
 import proto.OmaOuterClass
 
 class EventRepository {
+
     val events: Flow<OmaOuterClass.Event> = GrpcClient.subscribeToEvents()
         .repeatOnComplete()
         .onStart { println("📡 [EventRepository] Подписка запущена") }
@@ -31,9 +30,9 @@ class EventRepository {
             throw error
         }
         .shareIn(
-            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-            started = SharingStarted.WhileSubscribed(5000), // ← останавливается, если нет подписчиков >5 сек
-            replay = 0
+            scope = SessionManager.applicationScope,
+            started = SharingStarted.Eagerly,
+            replay = 1
         )
 
 

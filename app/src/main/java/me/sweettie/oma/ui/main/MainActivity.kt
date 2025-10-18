@@ -24,6 +24,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.network.GrpcClient
@@ -40,11 +41,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var gestureDetector: GestureDetectorCompat
     private val swipeDistance = 300
     private val swipeVelocity = 100
-    private lateinit var viewModel: MainViewModel
 
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
+        SessionManager.applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -168,6 +169,8 @@ class MainActivity : AppCompatActivity() {
                 navController.navigate(action)
             }
         }
+
+
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

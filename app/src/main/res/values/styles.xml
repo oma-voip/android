@@ -3,4 +3,12 @@
 
     <style name="ShapeAppearance.Squircle" parent="ShapeAppearance.Material3.Corner.Full" />
 
+    <style name="AppBottomSheetDialogTheme" parent="Theme.Design.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/AppModalStyle</item>
+    </style>
+
+    <style name="AppModalStyle" parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@drawable/bg_top</item>
+        <item name="android:windowBackground">@color/teal_200</item>
+    </style>
 </resources>

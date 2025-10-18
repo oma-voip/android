@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import me.sweettie.oma.data.Server
+import me.sweettie.oma.data.Streamer
+import me.sweettie.oma.data.Thumb
 import me.sweettie.oma.network.EventRepository
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.utils.SessionManager
@@ -116,6 +118,53 @@ class MainViewModel : ViewModel() {
                 SessionManager.mutedStates[state.userId] = state.muted
             }
 
+            OmaOuterClass.Event.EventCase.STREAMSTARTED -> {
+                val stream = event.streamStarted
+                if (SessionManager.selectedServer == null)
+                    return
+                SessionManager.streamers.put(
+                    stream.userId, Streamer(
+                        stream.relay,
+                        SessionManager.selectedServer!!.space.id,
+                        stream.channelId,
+                        stream.userId,
+                        stream.streamId
+                    )
+                )
+                _uiState.value = UiState.StreamStarted(stream.userId)
+            }
+
+            OmaOuterClass.Event.EventCase.STREAMSTOPPED -> {
+                val stream = event.streamStopped
+                SessionManager.streamers.remove(stream.userId)
+                SessionManager.thumbnail.remove(stream.userId)
+                _uiState.value = UiState.StreamEnded(stream.userId)
+            }
+
+            OmaOuterClass.Event.EventCase.ACTIVESTREAMS -> {
+                val activeStreams = event.activeStreams
+                val streams = activeStreams.streamsList
+                streams.forEach {
+                    if (SessionManager.selectedServer == null)
+                        return
+                    SessionManager.streamers.put(
+                        it.userId, Streamer(
+                            it.relay,
+                            SessionManager.selectedServer!!.space.id,
+                            it.channelId,
+                            it.userId,
+                            it.streamId
+                        )
+                    )
+                }
+            }
+
+            OmaOuterClass.Event.EventCase.THUMBNAIL -> {
+                val thumbnail = event.thumbnail
+                SessionManager.thumbnail.put(thumbnail.userId, Thumb(thumbnail))
+                _uiState.value = UiState.ThumbNail(thumbnail)
+            }
+
             OmaOuterClass.Event.EventCase.KEEPALIVE -> {}
 
             else -> {
@@ -133,5 +182,8 @@ class MainViewModel : ViewModel() {
         data class ChannelLeft(val channel: OmaOuterClass.ChannelLeft) : UiState()
         data class ChannelMembers(val channelMembers: OmaOuterClass.ChannelMembers) : UiState()
         data class VoiceRelayReady(val voiceRelay: OmaOuterClass.VoiceRelayReady) : UiState()
+        data class StreamStarted(val userID: String) : UiState()
+        data class StreamEnded(val userID: String) : UiState()
+        data class ThumbNail(val thumbnail: OmaOuterClass.Thumbnail) : UiState()
     }
 }

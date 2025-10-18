@@ -38,6 +38,9 @@ import java.io.FileWriter
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.net.URI
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import kotlin.random.Random
 
 
@@ -406,4 +409,32 @@ object Utils {
         }
     }
 
+    fun makeReadURL(
+        relay: String,
+        spaceID: String,
+        channelID: String,
+        userID: String,
+        streamID: String
+    ): String {
+        val base = URI(relay)
+        val segments = listOf(spaceID, channelID, userID, streamID, "whep")
+        val path = joinPaths(base.path ?: "", segments)
+        val userParam =
+            URLEncoder.encode(SessionManager.currentUser!!.id, StandardCharsets.UTF_8.name())
+        val newUri = URI(base.scheme, base.authority, path, "user=$userParam", null)
+
+        return newUri.toString()
+    }
+
+    private fun joinPaths(basePath: String, segments: List<String>): String {
+        val base =
+            if (basePath.isEmpty()) "/" else if (basePath.startsWith("/")) basePath else "/$basePath"
+        val prefix = if (base.endsWith("/")) base else "$base/"
+        val encodedSegments = segments.joinToString("/") { encodePathSegment(it) }
+        return prefix + encodedSegments
+    }
+
+    private fun encodePathSegment(segment: String): String {
+        return URLEncoder.encode(segment, StandardCharsets.UTF_8.name()).replace("+", "%20")
+    }
 }

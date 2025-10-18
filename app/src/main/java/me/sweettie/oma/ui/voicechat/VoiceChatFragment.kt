@@ -28,6 +28,7 @@ import me.sweettie.oma.network.services.voip.VoipForegroundService
 import me.sweettie.oma.ui.chat.ChatFragmentArgs
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.main.MainViewModel
+import me.sweettie.oma.ui.webrtc.WebRtcPlayerActivity
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.Utils
 import me.sweettie.oma.utils.Utils.isServiceForegrounded
@@ -54,6 +55,7 @@ class VoiceChatFragment : Fragment() {
     }
 
     private val args: ChatFragmentArgs by navArgs()
+
 
     @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -96,6 +98,10 @@ class VoiceChatFragment : Fragment() {
                                 return@collect
                             renderVoiceMembers()
                         }
+                    }
+
+                    is MainViewModel.UiState.ThumbNail -> {
+
                     }
 
                     is MainViewModel.UiState.VoiceRelayReady -> {
@@ -166,6 +172,25 @@ class VoiceChatFragment : Fragment() {
                 }
                 requireContext().startService(stopIntent)
             }
+        }
+
+        if (SessionManager.muted) {
+            binding.btnMute.setImageDrawable(
+                AppCompatResources.getDrawable(
+                    requireContext(),
+                    R.drawable.ic_mic
+                )
+            )
+            lifecycleScope.launch {
+                GrpcClient.setMuted(args.serverId, args.channelId, SessionManager.muted)
+            }
+        } else {
+            binding.btnMute.setImageDrawable(
+                AppCompatResources.getDrawable(
+                    requireContext(),
+                    R.drawable.ic_mic_off
+                )
+            )
         }
 
         binding.btnMute.setOnClickListener {
@@ -344,34 +369,61 @@ class VoiceChatFragment : Fragment() {
 
                     val imageView = view.findViewById<ImageView>(R.id.tvVoiceChatMemberLogo)
 
-
-                    if (isMuted) {
-                        imageView.setImageDrawable(
-                            AppCompatResources.getDrawable(
-                                requireContext(),
-                                R.drawable.ic_mic_off
+                    val stream = SessionManager.streamers.getOrDefault(uuid.toString(), null)
+                    val thumbnail = SessionManager.thumbnail.getOrDefault(uuid.toString(), null)
+                    var needTint = true
+                    if (stream == null) {
+                        if (isMuted) {
+                            imageView.setImageDrawable(
+                                AppCompatResources.getDrawable(
+                                    requireContext(),
+                                    R.drawable.ic_mic_off
+                                )
                             )
-                        )
-                    } else {
-                        imageView.setImageDrawable(
-                            AppCompatResources.getDrawable(
-                                requireContext(),
-                                R.drawable.ic_member
+                        } else {
+                            imageView.setImageDrawable(
+                                AppCompatResources.getDrawable(
+                                    requireContext(),
+                                    R.drawable.ic_member
+                                )
                             )
-                        )
-                    }
-
-
-                    val newTint = if (isSpeaking) {
-                        ContextCompat.getColor(
-                            requireContext(),
-                            R.color.colorMoreContrastBackground
-                        )
+                        }
                     } else {
-                        ContextCompat.getColor(requireContext(), R.color.white)
+                        if (thumbnail == null) {
+                            imageView.setImageDrawable(
+                                AppCompatResources.getDrawable(
+                                    requireContext(),
+                                    R.drawable.ic_output
+                                )
+                            )
+                        } else {
+                            needTint = false
+                            imageView.colorFilter = null
+                            imageView.imageTintList = null
+                            imageView.setImageBitmap(thumbnail.bitmap)
+                        }
+                        imageView.setOnClickListener {
+                            val intent = Intent(context, WebRtcPlayerActivity::class.java)
+                            intent.putExtra(WebRtcPlayerActivity.EXTRA_TARGET_URL, stream.url)
+                            intent.putExtra(
+                                WebRtcPlayerActivity.EXTRA_AUTH,
+                                "${SessionManager.currentUser!!.id}:${SessionManager.token}"
+                            )
+                            intent.putExtra(WebRtcPlayerActivity.EXTRA_ID, uuid.toString())
+                            startActivity(intent)
+                        }
                     }
-
-                    imageView.setColorFilter(newTint, android.graphics.PorterDuff.Mode.SRC_IN)
+                    if (needTint) {
+                        val newTint = if (isSpeaking) {
+                            ContextCompat.getColor(
+                                requireContext(),
+                                R.color.colorMoreContrastBackground
+                            )
+                        } else {
+                            ContextCompat.getColor(requireContext(), R.color.white)
+                        }
+                        imageView.setColorFilter(newTint, android.graphics.PorterDuff.Mode.SRC_IN)
+                    }
                 }
             }
         }

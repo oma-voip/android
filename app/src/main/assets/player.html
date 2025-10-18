@@ -1,0 +1,105 @@
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width"/>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: "Arial", sans-serif;
+        }
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgb(30, 30, 30);
+        }
+        #message {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            text-align: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            pointer-events: none;
+            padding: 20px;
+            box-sizing: border-box;
+            text-shadow: 0 0 5px black;
+        }
+    </style>
+    <script defer src="reader.js"></script>
+</head>
+<body>
+<video id="video"></video>
+<div id="message"></div>
+
+<script>
+    const video = document.getElementById("video")
+    const message = document.getElementById("message")
+    let reader = null
+
+    const setMessage = (str) => {
+        if (str !== "") {
+            video.controls = false
+        } else {
+            video.controls = true
+        }
+        message.innerText = str
+    }
+
+    const params = new URLSearchParams(window.location.search)
+
+    console.log("Raw params: ", window.location.search)
+
+    const encodedUrl = params.get("url")
+    const auth = params.get("auth")
+    if (!encodedUrl || !auth) {
+        console.error("url, auth are required")
+        window.close()
+    }
+
+    console.log("Params: ", encodedUrl, auth)
+
+    const targetUrl = decodeURIComponent(encodedUrl)
+    console.log("Got URL: ", targetUrl)
+
+    window.addEventListener("load", () => {
+        reader = new MediaMTXWebRTCReader({
+            url: targetUrl,
+            auth: auth,
+            onError: (err) => {
+                console.log(err)
+                setMessage(err)
+                window.close()
+            },
+            onTrack: (evt) => {
+                setMessage("")
+
+                video.srcObject = evt.streams[0]
+                video.controls = true
+                video.muted = false
+                video.autoplay = true
+                video.playsInline = true
+                video.disablepictureinpicture = true
+            },
+        })
+    })
+
+    window.addEventListener("beforeunload", () => {
+        if (reader !== null) {
+            reader.close()
+        }
+    })
+</script>
+</body>
+</html>

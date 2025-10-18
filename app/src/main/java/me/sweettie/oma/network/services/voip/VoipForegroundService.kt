@@ -159,7 +159,7 @@ class VoipForegroundService : Service() {
             val distance = event.values[0]
             val max = proximitySensor?.maximumRange ?: 0f
             val isNear = distance < max
-            if (isNear && isConnectedToRelay && SessionManager.oldOutputType == 1) {
+            if (isNear && isConnectedToRelay && SessionManager.oldOutputType == 1 && !SessionManager.isWatchStream) {
                 // Прикрыл ухо -> гасим экран
                 try {
                     if (proximityWakeLock != null && proximityWakeLock?.isHeld != true) {

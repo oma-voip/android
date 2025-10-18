@@ -1,7 +1,10 @@
 package me.sweettie.oma.utils
 
+import kotlinx.coroutines.CoroutineScope
 import me.sweettie.oma.data.MessageList
 import me.sweettie.oma.data.Server
+import me.sweettie.oma.data.Streamer
+import me.sweettie.oma.data.Thumb
 import me.sweettie.oma.updater.VersionInfo
 import proto.OmaOuterClass
 import java.util.UUID
@@ -16,10 +19,14 @@ enum class SessionState {
 
 object SessionManager {
 
+    lateinit var applicationScope: CoroutineScope
+    var isWatchStream = false
     val mutedStates: HashMap<String, Boolean> = HashMap()
     var oldOutputType: Int = 1
     lateinit var updateInfo: VersionInfo
     var startCallTime: Long = -1L
+    val streamers: HashMap<String, Streamer> = HashMap()
+    val thumbnail: HashMap<String, Thumb> = HashMap()
     var selectedServer: Server? = null
     var token: String? = null
     var currentUser: OmaOuterClass.User? = null

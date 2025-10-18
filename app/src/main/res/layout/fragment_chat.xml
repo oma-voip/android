@@ -174,45 +174,7 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/bottom_sheet_attachmentType"
-        android:background="@drawable/bg_attachemt_type"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:visibility="gone"
-        android:elevation="7dp"
-        android:layout_gravity="bottom"></androidx.recyclerview.widget.RecyclerView>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/bottom_sheet"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@drawable/bg_top"
-        android:elevation="6dp"
-        android:orientation="vertical"
-        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
-        <View
-            android:id="@+id/hui"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            android:layout_width="@dimen/status_bar_height"
-            android:layout_height="4dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="@dimen/x2_def_padding"
-            android:background="@drawable/bg_handle" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:padding="@dimen/x2_def_padding"
-            app:layout_constraintTop_toBottomOf="@id/hui"
-            android:id="@+id/bottom_sheet_itemList"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            android:layout_marginTop="@dimen/x2_def_padding"
-            android:orientation="vertical"></androidx.recyclerview.widget.RecyclerView>
-    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -12,18 +12,15 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import androidx.activity.addCallback
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.net.toUri
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.coroutines.launch
 import me.sweettie.oma.data.MessageList
 import me.sweettie.oma.databinding.FragmentChatBinding
@@ -31,6 +28,7 @@ import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.main.MainViewModel
 import me.sweettie.oma.ui.progress.ProgressDialogFragment
+import me.sweettie.oma.ui.utils.AttachmentBottomSheetFragment
 import me.sweettie.oma.utils.AttachmentStorage
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.Utils
@@ -57,14 +55,33 @@ class ChatFragment : Fragment() {
     private val args: ChatFragmentArgs by navArgs()
     private lateinit var ml: MessageList
     private lateinit var pd: ProgressDialogFragment
-    private lateinit var bottomSheetBehavior: BottomSheetBehavior<ConstraintLayout>
+    private lateinit var bottomSheetDialog: AttachmentBottomSheetFragment
+
+
+    private val SHEET_TAG = "attachment_bottom_sheet"
+
+    private fun showAttachmentSheet() {
+        // если уже показан, просто вернёмся или закроем
+        val existing =
+            parentFragmentManager.findFragmentByTag(SHEET_TAG) as? AttachmentBottomSheetFragment
+        if (existing?.isAdded == true) {
+            existing.reCreate()
+            return
+        }
+        val sheet = AttachmentBottomSheetFragment(
+            onSlide = { slideOffset -> /* ваш код */ },
+            update = { updateAttachmentText() },
+            (binding.root.height / 1.75).toInt()
+        )
+        println("CREATE NEW FRAGMENT")
+        sheet.show(parentFragmentManager, SHEET_TAG)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         AttachmentStorage.clearSelectedFiles()
-        bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
-        bottomSheetBehavior.isHideable = true
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+
+
 
 
         pd = ProgressDialogFragment()
@@ -76,8 +93,10 @@ class ChatFragment : Fragment() {
         binding.channelName.text =
             SessionManager.getServerBySpaceId(args.serverId)!!.hashChannels[args.channelId]!!.name
         binding.backBtn.setOnClickListener {
-            if (bottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
-                bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+            val existing =
+                parentFragmentManager.findFragmentByTag(SHEET_TAG) as? AttachmentBottomSheetFragment
+            if (existing?.isAdded == true && existing.dialog?.isShowing == true) {
+                existing.dismiss()
             } else {
                 val navController =
                     (activity as? MainActivity)?.navController ?: return@setOnClickListener
@@ -120,7 +139,6 @@ class ChatFragment : Fragment() {
 
     private var updateChat = false
 
-    private var selectedAttachment = 0
     private fun onLoadMessage() {
         val layoutManager = LinearLayoutManager(context)
         layoutManager.stackFromEnd = true
@@ -180,47 +198,24 @@ class ChatFragment : Fragment() {
             AttachmentStorage.clearSelectedFiles()
             updateAttachmentText()
         }
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
 
-        binding.root.viewTreeObserver.addOnGlobalLayoutListener(object :
-            ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                binding.bottomSheet.layoutParams.height =
-                    binding.root.height - binding.actionBar.height + 45
-                binding.bottomSheet.requestLayout()
-                bottomSheetBehavior.peekHeight = (binding.root.height / 1.75).toInt()
-                binding.bottomSheetItemList.minimumHeight =
-                    bottomSheetBehavior.peekHeight - binding.bottomSheetAttachmentType.height - 45
-                println(bottomSheetBehavior.peekHeight)
-                binding.root.viewTreeObserver.removeOnGlobalLayoutListener(this)
-            }
-        })
-
-
-        val items = listOf(
-            AttachmentOptionAdapter.AttachmentItem.Photo("Gallery"),
-            AttachmentOptionAdapter.AttachmentItem.File("File")
-        )
-        val adapter = AttachmentOptionAdapter(
-            items,
-            onPhotoClicked = { photo ->
-                selectedAttachment = 0
-                createAdapterForPhoto()
-            },
-            onFileClicked = { file ->
-                selectedAttachment = 1
-                createAdapterForPhoto()
-            }
-        )
-        binding.bottomSheetAttachmentType.adapter = adapter
-        binding.bottomSheetAttachmentType.layoutManager = LinearLayoutManager(
-            context,
-            LinearLayoutManager.HORIZONTAL, false
-        )
-
+//        binding.root.viewTreeObserver.addOnGlobalLayoutListener(object :
+//            ViewTreeObserver.OnGlobalLayoutListener {
+//            override fun onGlobalLayout() {
+////                bottomSheetDialog.layoutParams.height =
+////                    binding.root.height - binding.actionBar.height + 45
+////                binding.bottomSheet.requestLayout()
+//
+//                bottomSheetDialog.behavior?.peekHeight = (binding.root.height / 1.75).toInt()
+//                bottomSheetDialog.binding.bottomSheetItemList.minimumHeight =
+//                    bottomSheetDialog.behavior?.peekHeight?.minus(binding.bottomSheetAttachmentType.height)?.minus(45)?:0
+//                binding.root.viewTreeObserver.removeOnGlobalLayoutListener(this)
+//            }
+//        })
 
 
         binding.attachmentBtn.setOnClickListener {
+            println("Handle attachemtn click")
             binding.messageBox.clearFocus()
             this@ChatFragment.hideKeyboard()
             Handler(Looper.getMainLooper()).postDelayed({
@@ -239,12 +234,13 @@ class ChatFragment : Fragment() {
                         )
                     }
                 }
-                createAdapterForPhoto()
 
-                if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
-                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                val existing =
+                    parentFragmentManager.findFragmentByTag(SHEET_TAG) as? AttachmentBottomSheetFragment
+                if (existing?.isAdded == true && existing.dialog?.isShowing == true) {
+                    existing.dismiss()
                 } else {
-                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+                    showAttachmentSheet()
                 }
             }, 150)
         }
@@ -254,36 +250,13 @@ class ChatFragment : Fragment() {
 
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            println(bottomSheetBehavior.state)
-            if (bottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
-                bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+            if (!bottomSheetDialog.isHidden) {
+                bottomSheetDialog.dismiss()
             } else {
                 isEnabled = false
                 requireActivity().onBackPressed()
             }
         }
-
-        bottomSheetBehavior.addBottomSheetCallback(object :
-            BottomSheetBehavior.BottomSheetCallback() {
-            override fun onStateChanged(bottomSheet: View, newState: Int) {
-            }
-
-            override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                if (slideOffset <= 0.0f) {
-                    binding.bottomSheetAttachmentType.visibility = View.VISIBLE
-                    val height = binding.bottomSheetAttachmentType.height.toFloat()
-                    val r1 = height * (1 - slideOffset)
-                    binding.bottomSheetAttachmentType.translationY = -(height - r1)
-                } else {
-                    binding.bottomSheetAttachmentType.alpha = 1 - slideOffset
-                    if (slideOffset >= 0.8f)
-                        binding.bottomSheetAttachmentType.visibility = View.GONE
-                    else
-                        binding.bottomSheetAttachmentType.visibility = View.VISIBLE
-                }
-            }
-
-        })
 
         binding.clearFileBtn.setOnClickListener {
             AttachmentStorage.clearSelectedFiles()
@@ -322,65 +295,33 @@ class ChatFragment : Fragment() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 123) {
             println("REQUEST PERMISSION RESULT")
-            createAdapterForPhoto()
+            showAttachmentSheet()
         }
     }
 
-    private var oldSelectedAttahcmentType = -1
-    private fun createAdapterForPhoto() {
-        if (oldSelectedAttahcmentType == selectedAttachment)
-            return
-        binding.bottomSheetItemList.removeAllViews()
-        if (selectedAttachment == 0) {
-            binding.bottomSheetItemList.layoutManager = GridLayoutManager(context, 3)
 
-            val imageUris = Utils.loadGalleryImages(requireContext())
-            binding.bottomSheetItemList.adapter = ImagesAdapter(imageUris) { selectedUri ->
-                println("Selected image: ${selectedUri}")
-                bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-                AttachmentStorage.selectFile(selectedUri.toString())
-                updateAttachmentText()
-            }
-        } else if (selectedAttachment == 1) {
-
-            binding.bottomSheetItemList.layoutManager = LinearLayoutManager(context)
-            val files = AttachmentStorage.getUploadedFiles()
-            binding.bottomSheetItemList.adapter = FileAdapter(
-                files, onClicked = { selectedUri ->
-                    println("Selected image: ${selectedUri}")
-                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-                    AttachmentStorage.selectFile(selectedUri)
-                    updateAttachmentText()
-                },
-                onHeaderClicked = {
-                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-
-                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = "*/*" // "image/*" - для изображений
-                    }
-
-                    startActivityForResult(intent, 321)
-                })
-
-
-        }
-
-        oldSelectedAttahcmentType = selectedAttachment
-    }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 321 && resultCode == Activity.RESULT_OK) {
             data?.data?.also { uri ->
-                bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+                closeAttachmentFragment()
                 AttachmentStorage.selectFile(uri.toString())
                 updateAttachmentText()
             }
         }
     }
 
-    @SuppressLint("SetTextI18n")
+
+    private fun closeAttachmentFragment() {
+        val existing =
+            parentFragmentManager.findFragmentByTag(SHEET_TAG) as? AttachmentBottomSheetFragment
+        if (existing?.isAdded == true && existing.dialog?.isShowing == true) {
+            existing.dismiss()
+        }
+    }
+
+    @SuppressLint("SetTextI18n", "UseKtx")
     fun updateAttachmentText() {
         val l = AttachmentStorage.getSelectedFiles()
         if (l.isNotEmpty()) {
@@ -396,7 +337,7 @@ class ChatFragment : Fragment() {
                 }
             }
         } else {
-            if (binding.filesSelectedLayout.visibility == View.VISIBLE) {
+            if (binding.filesSelectedLayout.isVisible) {
                 binding.filesSelectedLayout.animate()
                     .alpha(0f)
                     .setDuration(300)
@@ -440,4 +381,11 @@ class ChatFragment : Fragment() {
 
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        val existing =
+            parentFragmentManager.findFragmentByTag(SHEET_TAG) as? AttachmentBottomSheetFragment
+        existing?.dismissAllowingStateLoss()
+        super.onDestroyView()
+    }
 }
