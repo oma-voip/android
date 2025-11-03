@@ -95,6 +95,9 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     implementation("eu.buney.kopus:kopus:1.5.2")
 
+    //noinspection Aligned16KB
+    implementation(files("libs/google-webrtc-1.0.32006.aar"))
+
 }
 
 configurations {

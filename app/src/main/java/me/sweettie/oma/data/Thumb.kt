@@ -5,10 +5,11 @@ import android.graphics.BitmapFactory
 import proto.OmaOuterClass
 
 class Thumb(thumbnail: OmaOuterClass.Thumbnail) {
-    val bitmap: Bitmap
+    var bitmap: Bitmap? = null
 
     init {
         val bytes = thumbnail.data.toByteArray()
-        bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        if (bytes != null)
+            bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     }
 }

@@ -426,6 +426,25 @@ object Utils {
         return newUri.toString()
     }
 
+    fun makeWriteURL(
+        relay: String,
+        spaceID: String,
+        channelID: String,
+        userID: String,
+        streamID: String
+    ): String {
+        val base = URI(relay)
+        val segments = listOf(spaceID, channelID, userID, streamID, "whip")
+        val path = joinPaths(base.path ?: "", segments)
+        val userParam =
+            URLEncoder.encode(SessionManager.currentUser!!.id, StandardCharsets.UTF_8.name())
+        val newUri = URI(base.scheme, base.authority, path, "user=$userParam", null)
+
+        return newUri.toString()
+    }
+
+
+
     private fun joinPaths(basePath: String, segments: List<String>): String {
         val base =
             if (basePath.isEmpty()) "/" else if (basePath.startsWith("/")) basePath else "/$basePath"

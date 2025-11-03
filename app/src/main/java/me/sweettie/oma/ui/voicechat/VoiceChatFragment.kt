@@ -2,14 +2,19 @@ package me.sweettie.oma.ui.voicechat
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -25,6 +30,7 @@ import me.sweettie.oma.R
 import me.sweettie.oma.databinding.FragmentVoiceChatBinding
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.network.services.voip.VoipForegroundService
+import me.sweettie.oma.network.whip.ScreenCaptureService
 import me.sweettie.oma.ui.chat.ChatFragmentArgs
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.main.MainViewModel
@@ -57,7 +63,7 @@ class VoiceChatFragment : Fragment() {
     private val args: ChatFragmentArgs by navArgs()
 
 
-    @SuppressLint("SetTextI18n")
+    @SuppressLint("SetTextI18n", "ServiceCast")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -171,6 +177,12 @@ class VoiceChatFragment : Fragment() {
                     action = VoipForegroundService.ACTION_STOP
                 }
                 requireContext().startService(stopIntent)
+
+                val stopIntentScreenCapture =
+                    Intent(requireContext(), ScreenCaptureService::class.java).apply {
+                        action = ScreenCaptureService.ACTION_STOP
+                    }
+                requireContext().startService(stopIntentScreenCapture)
             }
         }
 
@@ -226,6 +238,14 @@ class VoiceChatFragment : Fragment() {
             }
             requireContext().startService(intent)
         }
+
+        binding.btnScreenShare.setOnClickListener {
+
+            onStartStreamClicked()
+
+
+        }
+
         val isRunning = isServiceForegrounded(requireContext(), VoipForegroundService::class.java)
         if (isRunning) {
             changeBottomState()
@@ -244,6 +264,59 @@ class VoiceChatFragment : Fragment() {
         if (requestCode == 123 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             startVoiceChat()
         }
+    }
+
+    private val mediaProjectionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            // передаем результат в сервис
+
+            lifecycleScope.launch {
+                val r = GrpcClient.getVideoRelay(args.serverId, args.channelId)
+                if (r == null)
+                    return@launch
+                println("Address: ${r.address}")
+                val adr = Utils.makeWriteURL(
+                    r.address,
+                    args.serverId,
+                    args.channelId,
+                    SessionManager.currentUser!!.id,
+                    UUID.randomUUID().toString()
+                )
+                println("Nedded address: $adr")
+                val intent = Intent(requireContext(), ScreenCaptureService::class.java).apply {
+                    action = ScreenCaptureService.ACTION_START
+                    putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, result.resultCode)
+                    putExtra(ScreenCaptureService.EXTRA_RESULT_INTENT, result.data)
+                    putExtra(ScreenCaptureService.EXTRA_WHIP_URL, adr)
+                    putExtra(
+                        ScreenCaptureService.EXTRA_AUTH,
+                        SessionManager.currentUser!!.id + ":" + SessionManager.token
+                    )
+                }
+                ContextCompat.startForegroundService(requireContext(), intent)
+            }
+
+
+        } else {
+            Toast.makeText(requireContext(), "Permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun onStartStreamClicked() {
+
+        val pm =
+            requireContext().getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        val captureIntent = pm.createScreenCaptureIntent()
+        mediaProjectionLauncher.launch(captureIntent)
+    }
+
+    fun onStopStreamClicked() {
+        val stop = Intent(requireContext(), ScreenCaptureService::class.java).apply {
+            action = ScreenCaptureService.ACTION_STOP
+        }
+        requireContext().startService(stop)
     }
 
     fun startVoiceChat() {
@@ -286,6 +359,7 @@ class VoiceChatFragment : Fragment() {
                     binding.btnHangup.alpha = 0f
                     binding.tvCallTime.alpha = 0f
                     binding.btnSpeaker.alpha = 0f
+                    binding.btnScreenShare.alpha = 0f
                     binding.btnMute.animate().alpha(1f).setDuration(200).withStartAction {
                         binding.btnMute.visibility = View.VISIBLE
                     }.start()
@@ -297,6 +371,9 @@ class VoiceChatFragment : Fragment() {
                     }.start()
                     binding.btnSpeaker.animate().alpha(1f).setDuration(200).withStartAction {
                         binding.btnSpeaker.visibility = View.VISIBLE
+                    }.start()
+                    binding.btnScreenShare.animate().alpha(1f).setDuration(200).withStartAction {
+                        binding.btnScreenShare.visibility = View.VISIBLE
                     }.start()
                 }
             }.start()
@@ -311,6 +388,9 @@ class VoiceChatFragment : Fragment() {
             }.start()
             binding.btnSpeaker.animate().alpha(0f).setDuration(200).withEndAction {
                 binding.btnSpeaker.visibility = View.GONE
+            }.start()
+            binding.btnScreenShare.animate().alpha(0f).setDuration(200).withEndAction {
+                binding.btnScreenShare.visibility = View.GONE
             }.start()
             binding.tvCallTime.animate().alpha(0f).setDuration(200).withEndAction {
                 binding.tvCallTime.visibility = View.GONE

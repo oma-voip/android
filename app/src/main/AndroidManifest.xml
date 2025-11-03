@@ -18,6 +18,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission
+        android:name="android.permission.CAPTURE_AUDIO_OUTPUT"
+        tools:ignore="ProtectedPermissions" />
 
     <application
         android:allowBackup="true"
@@ -30,6 +33,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Oma"
         tools:targetApi="36">
+        <service
+            android:name=".network.whip.ScreenCaptureService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection"
+            android:allowAudioPlaybackCapture="true"
+            tools:ignore="ForegroundServicePermission" />
         <activity
             android:name=".ui.webrtc.WebRtcPlayerActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
