@@ -5,10 +5,6 @@ package me.sweettie.oma.ui.main
 import android.Manifest
 import android.R.attr
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
@@ -18,12 +14,9 @@ import android.util.TypedValue
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.Window
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.GestureDetectorCompat
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.google.android.gms.tasks.OnCompleteListener
@@ -31,12 +24,10 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.home.HomeFragmentDirections
-import me.sweettie.oma.utils.SecurePrefs
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.SessionState
 import proto.OmaOuterClass
@@ -45,26 +36,15 @@ import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
-    private val vm: MainViewModel by viewModels()
-
-    private val receiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            lifecycleScope.launch {
-                if (SessionManager.lastMessageReceived != null)
-                    vm.pushEventFromUi(SessionManager.lastMessageReceived!!)
-            }
-        }
-    }
-
     lateinit var navController: NavController
     private lateinit var gestureDetector: GestureDetectorCompat
     private val swipeDistance = 300
     private val swipeVelocity = 100
+    private lateinit var viewModel: MainViewModel
+
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
-
-        SessionManager.applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -124,8 +104,7 @@ class MainActivity : AppCompatActivity() {
                 GrpcClient.registerFbToken(token)
             }
         })
-        if (SecurePrefs.sf == null)
-            SecurePrefs.init(this)
+
         SessionManager.saveState(SessionState.MAIN)
         window?.apply {
             statusBarColor = Color.TRANSPARENT
@@ -173,39 +152,20 @@ class MainActivity : AppCompatActivity() {
             if (intent.action == "START_ACTIVITY") {
                 val spaceId = intent.getStringExtra("spaceID")
                 val channelId = intent.getStringExtra("channelID")
-                println("Try to open space id $spaceId from notification")
                 val s = SessionManager.getServerBySpaceId(spaceId!!) ?: return
-                CoroutineScope(Dispatchers.IO).launch {
-                    s.loadAllNecessaryInfo()
-                    val c = s.hashChannels[channelId!!] ?: return@launch
-                    val action = if (c.type.equals(OmaOuterClass.ChannelType.TEXT)) {
-                        HomeFragmentDirections.actionHomeToChat(
-                            channelId = c.id,
-                            serverId = s.space.id
-                        )
-                    } else {
-                        HomeFragmentDirections.actionHomeToVoicechat(
-                            channelId = c.id,
-                            serverId = s.space.id
-                        )
-                    }
-                    SessionManager.selectedServer = s
-                    SessionManager.selectedChannel = c.id
-                    lifecycleScope.launchWhenResumed {
-                        println("Try to naviagate to new ACTION")
-                        navController.navigate(action)
-                    }
-
+                val c = s.hashChannels[channelId!!] ?: return
+                val action = if (c.type.equals(OmaOuterClass.ChannelType.TEXT)) {
+                    HomeFragmentDirections.actionHomeToChat(
+                        channelId = c.id,
+                        serverId = s.space.id
+                    )
+                } else {
+                    HomeFragmentDirections.actionHomeToVoicechat(
+                        channelId = c.id,
+                        serverId = s.space.id
+                    )
                 }
-            }
-        }
-
-
-        var viewModel = ViewModelProvider(this)[MainViewModel::class.java]
-        var job = lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                println(state)
-
+                navController.navigate(action)
             }
         }
     }
@@ -232,23 +192,5 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    override fun onResume() {
-        super.onResume()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(
-                receiver,
-                IntentFilter("me.sweettie.oma.NEW_MESSAGE"),
-                RECEIVER_EXPORTED
-            )
-        } else {
-            registerReceiver(receiver, IntentFilter("me.sweettie.oma.NEW_MESSAGE"))
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        unregisterReceiver(receiver)
-    }
 
 }
