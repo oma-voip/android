@@ -426,6 +426,7 @@ object Utils {
         return newUri.toString()
     }
 
+
     private fun joinPaths(basePath: String, segments: List<String>): String {
         val base =
             if (basePath.isEmpty()) "/" else if (basePath.startsWith("/")) basePath else "/$basePath"

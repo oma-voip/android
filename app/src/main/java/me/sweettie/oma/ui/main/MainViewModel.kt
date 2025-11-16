@@ -32,6 +32,165 @@ class MainViewModel : ViewModel() {
             .launchIn(viewModelScope) // ← запускает корутину, отменяет при onCleared()
     }
 
+    fun pushEventFromUi(message: OmaOuterClass.MessageReceived) {
+        viewModelScope.launch {
+            val msg = OmaOuterClass.Event.newBuilder()
+                .setMessageReceived(message)
+                .build()
+            handleEvent(msg)
+        }
+    }
+
+    companion object {
+        fun handHandleEvent(event: OmaOuterClass.Event) {
+            var ev: MainViewModel.UiState? = null
+            when (event.eventCase) {
+
+                OmaOuterClass.Event.EventCase.VOICERELAYREADY -> {
+                    println("+ VOICE_RELEY_READY | Space = ${event.voiceRelayReady.spaceId} | Peer id = ${event.voiceRelayReady.channelId} | Addr. = ${event.voiceRelayReady.address} | Key = ${event.voiceRelayReady.key}")
+                    ev = UiState.VoiceRelayReady(event.voiceRelayReady)
+                }
+
+
+                OmaOuterClass.Event.EventCase.JOINSPACE -> {
+                    val space = event.joinSpace
+                    println("🚀 JOIN_SPACE: ${space.id} by ${space.userId}")
+                    ev = UiState.ServerJoined(space.id, space.userId)
+                }
+
+
+                OmaOuterClass.Event.EventCase.CHANNELCREATED -> {
+                    val channel = event.channelCreated
+
+                    println("🆕 CHANNEL_CREATED: ${channel.channelId} in ${channel.spaceId}")
+                    ev = UiState.ChannelCreated(channel)
+                }
+
+                OmaOuterClass.Event.EventCase.MESSAGERECEIVED -> {
+                    val message = event.messageReceived.message
+                    if (SessionManager.lastMessage != null && SessionManager.lastMessage!!.id == message.id) {
+                        println("Dissmiss message becouse it is copy of last message ")
+                        return
+                    }
+                    val temp = SessionManager.unreadedMessages.getOrDefault(
+                        event.messageReceived.spaceId,
+                        arrayListOf()
+                    )
+                    temp.add(event.messageReceived.channelId)
+                    SessionManager.unreadedMessages.put(event.messageReceived.spaceId, temp)
+                    println("💬 MESSAGE_RECEIVED 222: ${message.text} from ${message.userId}")
+                    message.attachmentsList.forEach {
+                        println("File with id ${it.id} and content.size() = ${it.imagePreview.content.size()}")
+                    }
+                    ev = UiState.NewMessage(event.messageReceived)
+                    SessionManager.lastMessage = message
+
+                }
+
+
+                OmaOuterClass.Event.EventCase.CHANNELJOINED -> {
+                    val channel = event.channelJoined
+                    println("🚪 CHANNEL_JOINED: ${channel.channelId}")
+                    val t =
+                        SessionManager.channelMembers.getOrDefault(channel.channelId, ArrayList())
+                    val vm = OmaOuterClass.VoiceMember.newBuilder().setId(channel.userId).build()
+                    t.add(vm)
+                    SessionManager.channelMembers[channel.channelId] = t
+                    ev = UiState.ChannelJoined(channel)
+                }
+
+                OmaOuterClass.Event.EventCase.CHANNELLEFT -> {
+                    val channel = event.channelLeft
+                    println("🚪 CHANNEL_LEFT: ${channel.channelId}")
+                    val t =
+                        SessionManager.channelMembers.getOrDefault(channel.channelId, ArrayList())
+                    var deleted = false
+                    val iter = t.iterator()
+                    while (iter.hasNext()) {
+                        val member = iter.next()
+                        if (member.id == channel.userId) {
+                            iter.remove()
+                            deleted = true
+                        }
+                    }
+                    if (deleted) {
+                        SessionManager.channelMembers[channel.channelId] = t
+                    }
+                    ev = UiState.ChannelLeft(channel)
+                }
+
+                OmaOuterClass.Event.EventCase.CHANNELMEMBERS -> {
+                    SessionManager.channelMembers[event.channelMembers.channelId] =
+                        ArrayList(event.channelMembers.membersList)
+                    ev = UiState.ChannelMembers(event.channelMembers)
+                }
+
+                OmaOuterClass.Event.EventCase.MUTEDSTATEUPDATED -> {
+                    val state = event.mutedStateUpdated
+                    SessionManager.mutedStates[state.userId] = state.muted
+                }
+
+                OmaOuterClass.Event.EventCase.STREAMSTARTED -> {
+                    val stream = event.streamStarted
+                    if (SessionManager.selectedServer == null)
+                        return
+                    SessionManager.streamers.put(
+                        stream.userId, Streamer(
+                            stream.relay,
+                            SessionManager.selectedServer!!.space.id,
+                            stream.channelId,
+                            stream.userId,
+                            stream.streamId
+                        )
+                    )
+                    ev = UiState.StreamStarted(stream.userId)
+                }
+
+                OmaOuterClass.Event.EventCase.STREAMSTOPPED -> {
+                    val stream = event.streamStopped
+                    SessionManager.streamers.remove(stream.userId)
+                    SessionManager.thumbnail.remove(stream.userId)
+                    ev = UiState.StreamEnded(stream.userId)
+                }
+
+                OmaOuterClass.Event.EventCase.ACTIVESTREAMS -> {
+                    val activeStreams = event.activeStreams
+                    val streams = activeStreams.streamsList
+                    streams.forEach {
+                        if (SessionManager.selectedServer == null)
+                            return
+                        SessionManager.streamers.put(
+                            it.userId, Streamer(
+                                it.relay,
+                                SessionManager.selectedServer!!.space.id,
+                                it.channelId,
+                                it.userId,
+                                it.streamId
+                            )
+                        )
+                    }
+                }
+
+                OmaOuterClass.Event.EventCase.THUMBNAIL -> {
+                    val thumbnail = event.thumbnail
+                    SessionManager.thumbnail.put(thumbnail.userId, Thumb(thumbnail))
+                    ev = UiState.ThumbNail(thumbnail)
+                }
+
+                OmaOuterClass.Event.EventCase.KEEPALIVE -> {}
+
+                else -> {
+                    println("❓ Необработанное событие: ${event.eventCase}")
+                }
+
+
+            }
+            println("Call by hand in home fragment $ev")
+            if (ev != null)
+                SessionManager.homeFragListener(ev)
+        }
+    }
+
     private fun handleEvent(event: OmaOuterClass.Event) {
         println("New Event: ${event.eventCase}")
         when (event.eventCase) {
@@ -71,12 +230,25 @@ class MainViewModel : ViewModel() {
 
             OmaOuterClass.Event.EventCase.MESSAGERECEIVED -> {
                 val message = event.messageReceived.message
+                if (SessionManager.lastMessage != null && SessionManager.lastMessage!!.id == message.id) {
+                    println("Dissmiss message becouse it is copy of last message ")
+                    return
+                }
+                val temp = SessionManager.unreadedMessages.getOrDefault(
+                    event.messageReceived.spaceId,
+                    arrayListOf()
+                )
+                temp.add(event.messageReceived.channelId)
+                SessionManager.unreadedMessages.put(event.messageReceived.spaceId, temp)
                 println("💬 MESSAGE_RECEIVED: ${message.text} from ${message.userId}")
                 message.attachmentsList.forEach {
-                    println("File with id ${it.id} and content.size() = ${it.preview.content.size()}")
+                    println("File with id ${it.id} and content.size() = ${it.imagePreview.content.size()}")
                 }
                 _uiState.value = UiState.NewMessage(event.messageReceived)
+                SessionManager.lastMessage = message
+
             }
+
 
             OmaOuterClass.Event.EventCase.CHANNELJOINED -> {
                 val channel = event.channelJoined
@@ -170,7 +342,10 @@ class MainViewModel : ViewModel() {
             else -> {
                 println("❓ Необработанное событие: ${event.eventCase}")
             }
+
+
         }
+
     }
 
     sealed class UiState {
@@ -186,4 +361,7 @@ class MainViewModel : ViewModel() {
         data class StreamEnded(val userID: String) : UiState()
         data class ThumbNail(val thumbnail: OmaOuterClass.Thumbnail) : UiState()
     }
+
+
 }
+

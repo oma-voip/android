@@ -5,6 +5,7 @@ import me.sweettie.oma.data.MessageList
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.data.Streamer
 import me.sweettie.oma.data.Thumb
+import me.sweettie.oma.ui.main.MainViewModel
 import me.sweettie.oma.updater.VersionInfo
 import proto.OmaOuterClass
 import java.util.UUID
@@ -19,10 +20,16 @@ enum class SessionState {
 
 object SessionManager {
 
+    var added: Boolean = false
+    var homeFragListener: (MainViewModel.UiState) -> Unit = { job -> {} }
     lateinit var applicationScope: CoroutineScope
     var isWatchStream = false
+    val unreadedMessages: HashMap<String, ArrayList<String>> = HashMap()
     val mutedStates: HashMap<String, Boolean> = HashMap()
     var oldOutputType: Int = 1
+
+    var lastMessage: OmaOuterClass.Message? = null
+    var lastMessageReceived: OmaOuterClass.MessageReceived? = null
     lateinit var updateInfo: VersionInfo
     var startCallTime: Long = -1L
     val streamers: HashMap<String, Streamer> = HashMap()
@@ -44,7 +51,7 @@ object SessionManager {
     lateinit var cacheManager: AttachmentCacheManager
 
     fun loadState() {
-        val state = SecurePrefs.sf.getString("state", "CEMAIL")!!
+        val state = SecurePrefs.sf!!.getString("state", "CEMAIL")!!
         currentState = try {
             SessionState.valueOf(state)
         } catch (e: java.lang.IllegalArgumentException) {

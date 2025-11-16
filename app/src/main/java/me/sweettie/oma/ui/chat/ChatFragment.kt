@@ -13,6 +13,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.addCallback
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -21,7 +22,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import me.sweettie.oma.R
 import me.sweettie.oma.data.MessageList
 import me.sweettie.oma.databinding.FragmentChatBinding
 import me.sweettie.oma.network.GrpcClient
@@ -55,7 +59,7 @@ class ChatFragment : Fragment() {
     private val args: ChatFragmentArgs by navArgs()
     private lateinit var ml: MessageList
     private lateinit var pd: ProgressDialogFragment
-    private lateinit var bottomSheetDialog: AttachmentBottomSheetFragment
+    private var bottomSheetDialog: AttachmentBottomSheetFragment? = null
 
 
     private val SHEET_TAG = "attachment_bottom_sheet"
@@ -89,9 +93,19 @@ class ChatFragment : Fragment() {
         binding.sendBtn.isEnabled = false
         val channelId = args.channelId
         val serverId = args.serverId
-
-        binding.channelName.text =
-            SessionManager.getServerBySpaceId(args.serverId)!!.hashChannels[args.channelId]!!.name
+        val server = SessionManager.getServerBySpaceId(args.serverId)
+        println("Selected ${server!!.space.name}")
+        if (server.space.private) {
+            binding.channelName.text = server.space.name
+            binding.optionBtn.setImageDrawable(
+                AppCompatResources.getDrawable(
+                    requireContext(),
+                    R.drawable.ic_call_start
+                )
+            )
+        } else
+            binding.channelName.text =
+                SessionManager.getServerBySpaceId(args.serverId)!!.hashChannels[args.channelId]!!.name
         binding.backBtn.setOnClickListener {
             val existing =
                 parentFragmentManager.findFragmentByTag(SHEET_TAG) as? AttachmentBottomSheetFragment
@@ -107,15 +121,31 @@ class ChatFragment : Fragment() {
         binding.optionBtn.setOnClickListener {
             val navController =
                 (activity as? MainActivity)?.navController ?: return@setOnClickListener
-            val action = ChatFragmentDirections.actionChatToMembers(
-                channelId = channelId,
-                serverId = serverId
-            )
-            navController.navigate(action)
+            if (server.space.private) {
+                navController.navigate(
+                    ChatFragmentDirections.actionChatFragmentToVoiceChatFragment(
+                        channelId = server.channels[1].id,
+                        serverId = server.space.id
+                    )
+                )
+            } else {
+                val action = ChatFragmentDirections.actionChatToMembers(
+                    channelId = channelId,
+                    serverId = serverId
+                )
+                navController.navigate(action)
+            }
         }
 
         SessionManager.selectedChannel = args.channelId
-
+        val r = SessionManager.unreadedMessages.get(SessionManager.selectedServer!!.space.id)
+        if (r != null) {
+            r.remove(args.channelId)
+            if (r.isEmpty())
+                SessionManager.unreadedMessages.remove(SessionManager.selectedServer!!.space.id)
+            else
+                SessionManager.unreadedMessages[SessionManager.selectedServer!!.space.id] = r
+        }
         if (SessionManager.cachedMessageList.containsKey(channelId)) {
             ml = SessionManager.cachedMessageList[channelId]!!
             onLoadMessage()
@@ -250,8 +280,8 @@ class ChatFragment : Fragment() {
 
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            if (!bottomSheetDialog.isHidden) {
-                bottomSheetDialog.dismiss()
+            if (bottomSheetDialog != null && !bottomSheetDialog!!.isHidden) {
+                bottomSheetDialog?.dismiss()
             } else {
                 isEnabled = false
                 requireActivity().onBackPressed()
@@ -263,10 +293,16 @@ class ChatFragment : Fragment() {
             updateAttachmentText()
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
+        job = viewLifecycleOwner.lifecycleScope.launch {
             viewModel.uiState.collect { state ->
                 when (state) {
                     is MainViewModel.UiState.NewMessage -> {
+                        if (SessionManager.lastMessage != null) {
+                            if (SessionManager.lastMessage!!.id == state.message.message.id)
+                                return@collect
+                        }
+                        SessionManager.lastMessage = state.message.message
+                        println("New message to channelID = ${state.message.channelId} (${args.channelId}) and spaceId = ${state.message.spaceId} (${args.serverId})")
                         if (state.message.channelId.equals(args.channelId) && state.message.spaceId.equals(
                                 args.serverId
                             )
@@ -276,6 +312,17 @@ class ChatFragment : Fragment() {
                             binding.listMessages.post {
                                 binding.listMessages.smoothScrollToPosition(ml.stackedMessageList.size)
                             }
+                            val r =
+                                SessionManager.unreadedMessages.get(SessionManager.selectedServer!!.space.id)
+                            if (r != null) {
+                                r.remove(args.channelId)
+                                if (r.isEmpty())
+                                    SessionManager.unreadedMessages.remove(SessionManager.selectedServer!!.space.id)
+                                else
+                                    SessionManager.unreadedMessages[SessionManager.selectedServer!!.space.id] =
+                                        r
+                            }
+
                         }
                     }
 
@@ -286,6 +333,7 @@ class ChatFragment : Fragment() {
 
     }
 
+    private var job: Job? = null
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -298,7 +346,6 @@ class ChatFragment : Fragment() {
             showAttachmentSheet()
         }
     }
-
 
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -382,10 +429,12 @@ class ChatFragment : Fragment() {
     }
 
     override fun onDestroy() {
+        job?.cancel(CancellationException())
         super.onDestroy()
         val existing =
             parentFragmentManager.findFragmentByTag(SHEET_TAG) as? AttachmentBottomSheetFragment
         existing?.dismissAllowingStateLoss()
+
         super.onDestroyView()
     }
 }

@@ -18,6 +18,7 @@ class Server(
         members = r.membersList
         val t = GrpcClient.getChannels(space.id) ?: return
         channels = t.channelsList
+        println("Updating hash for ${space.id} (${space.name})\nChats: ${channels.size}")
         updateHash()
     }
 

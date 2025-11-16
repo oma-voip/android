@@ -61,7 +61,7 @@ class ChatImage @JvmOverloads constructor(
             }
         } else {
 
-            val preview = attachment.preview
+            val preview = attachment.imagePreview
             imageView.setImageBitmap(
                 Utils.createBitmapFromRGBA(
                     preview,

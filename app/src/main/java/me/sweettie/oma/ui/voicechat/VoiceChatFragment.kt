@@ -76,8 +76,12 @@ class VoiceChatFragment : Fragment() {
             navController.navigate(action)
         }
 
-        binding.channelName.text =
-            "voice \"${SessionManager.selectedServer!!.hashChannels[args.channelId]!!.name}\""
+        if (SessionManager.selectedServer!!.space.private) {
+            binding.channelName.text = SessionManager.selectedServer!!.space.name
+        } else {
+            binding.channelName.text =
+                "voice \"${SessionManager.selectedServer!!.hashChannels[args.channelId]!!.name}\""
+        }
         renderVoiceMembers()
 
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
