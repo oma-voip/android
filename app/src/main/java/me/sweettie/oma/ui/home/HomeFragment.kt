@@ -5,10 +5,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavDirections
 import androidx.recyclerview.widget.LinearLayoutManager
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.databinding.FragmentHomeBinding
@@ -20,10 +20,10 @@ import me.sweettie.oma.utils.Utils
 import proto.OmaOuterClass
 
 class HomeFragment : Fragment() {
+    private var job: Job? = null
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var viewModel: MainViewModel
 
 
 
@@ -159,12 +159,35 @@ class HomeFragment : Fragment() {
 
     fun reg() {
 
-        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                println("STATE IN HOME FRAGMENT!")
+        job = viewLifecycleOwner.lifecycleScope.launch {
+            SessionManager.viewModel.uiState.collect { state ->
                 when (state) {
+                    is MainViewModel.UiState.NewMessage -> {
+                        println("Unreded messages: ${SessionManager.unreadedMessages.values.size}")
+                        if (SessionManager.lastMessage != null && SessionManager.lastMessage!!.id == state.message.message.id)
+                            return@collect
+                        val space = SessionManager.getServerBySpaceId(state.message.spaceId)
+                        if (space!!.space.private)
+                            (binding.rvServers.adapter as ServerAdapter).notifyItemChanged(0)
+                        else {
+                            (binding.rvServers.adapter as ServerAdapter).notifyItemChanged(
+                                space
+                            )
+                        }
 
+                        if (SessionManager.selectedServer == null)
+                            return@collect
+                        if (SessionManager.selectedServer!!.space.id != state.message.spaceId)
+                            return@collect
+                        if (!SessionManager.selectedServer!!.space.private)
+                            (binding.serverChannels.adapter as ChannelAdapter).updateChannel(
+                                state.message.channelId
+                            )
+                        else
+                            (binding.serverChannels.adapter as ChannelAdapter).updateChannel(
+                                state.message.spaceId
+                            )
+                    }
                     is MainViewModel.UiState.ServerJoined -> {
                         if (SessionManager.getServerBySpaceId(state.spaceId) == null) {
                             val r = GrpcClient.getSpace(state.spaceId) ?: return@collect
@@ -251,6 +274,7 @@ class HomeFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        job?.cancel()
         _binding = null
     }
 

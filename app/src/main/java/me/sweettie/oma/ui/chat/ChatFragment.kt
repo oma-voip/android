@@ -17,7 +17,6 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -165,7 +164,6 @@ class ChatFragment : Fragment() {
 
     }
 
-    private lateinit var viewModel: MainViewModel
 
     private var updateChat = false
 
@@ -276,7 +274,6 @@ class ChatFragment : Fragment() {
         }
 
 
-        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
@@ -294,7 +291,7 @@ class ChatFragment : Fragment() {
         }
 
         job = viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
+            SessionManager.viewModel.uiState.collect { state ->
                 when (state) {
                     is MainViewModel.UiState.NewMessage -> {
                         if (SessionManager.lastMessage != null) {

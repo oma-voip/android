@@ -17,6 +17,7 @@ import android.view.Window
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.GestureDetectorCompat
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.google.android.gms.tasks.OnCompleteListener
@@ -34,13 +35,13 @@ import proto.OmaOuterClass
 import kotlin.math.abs
 
 
+
 class MainActivity : AppCompatActivity() {
 
     lateinit var navController: NavController
     private lateinit var gestureDetector: GestureDetectorCompat
     private val swipeDistance = 300
     private val swipeVelocity = 100
-    private lateinit var viewModel: MainViewModel
 
 
     @SuppressLint("ClickableViewAccessibility")
@@ -106,6 +107,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         SessionManager.saveState(SessionState.MAIN)
+        SessionManager.viewModel = ViewModelProvider(this)[MainViewModel::class]
         window?.apply {
             statusBarColor = Color.TRANSPARENT
         }
