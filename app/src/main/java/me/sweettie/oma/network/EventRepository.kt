@@ -32,8 +32,8 @@ class EventRepository {
         }
         .shareIn(
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-            started = SharingStarted.WhileSubscribed(5000), // ← останавливается, если нет подписчиков >5 сек
-            replay = 0
+            started = SharingStarted.WhileSubscribed(100L),
+            replay = 1
         )
 
 
