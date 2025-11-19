@@ -8,7 +8,6 @@ import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import me.sweettie.oma.ui.main.MainViewModel
@@ -21,8 +20,6 @@ class WebRtcPlayerActivity : AppCompatActivity() {
         const val EXTRA_AUTH = "extra_auth"
         const val EXTRA_ID = "extra_id"
     }
-
-    private lateinit var viewModel: MainViewModel
 
     private lateinit var webView: WebView
 
@@ -58,9 +55,8 @@ class WebRtcPlayerActivity : AppCompatActivity() {
 
 
 
-        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
         lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
+            SessionManager.viewModel.uiState.collect { state ->
                 when (state) {
                     is MainViewModel.UiState.StreamEnded -> {
                         if (state.userID == id)

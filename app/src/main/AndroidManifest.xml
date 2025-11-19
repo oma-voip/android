@@ -29,6 +29,7 @@
         android:roundIcon="@mipmap/svg_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.Oma"
+        android:enableOnBackInvokedCallback="true"
         tools:targetApi="36">
         <activity
             android:name=".ui.webrtc.WebRtcPlayerActivity"

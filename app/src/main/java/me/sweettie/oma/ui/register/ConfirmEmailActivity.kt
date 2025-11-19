@@ -8,7 +8,13 @@ import kotlinx.coroutines.launch
 import me.sweettie.oma.databinding.ActivityConfirmEmailBinding
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.login.LoginActivity
-import me.sweettie.oma.utils.*
+import me.sweettie.oma.utils.SecurePrefs
+import me.sweettie.oma.utils.SessionManager
+import me.sweettie.oma.utils.SessionState
+import me.sweettie.oma.utils.Utils
+import me.sweettie.oma.utils.getEndText
+import me.sweettie.oma.utils.isPresent
+import me.sweettie.oma.utils.onTextUpdate
 
 class ConfirmEmailActivity : AppCompatActivity() {
 
@@ -19,7 +25,7 @@ class ConfirmEmailActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityConfirmEmailBinding.inflate(layoutInflater)
-        val temail = SecurePrefs.sf.getString("email", null)
+        val temail = SecurePrefs.sf!!.getString("email", null)
         if (temail == null) {
             Utils.openActivity(this, RegisterActivity::class.java)
             finishAffinity()
