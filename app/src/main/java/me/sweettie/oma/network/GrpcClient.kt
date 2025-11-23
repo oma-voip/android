@@ -410,5 +410,21 @@ object GrpcClient {
         }
     }
 
+    suspend fun getVideoRelay(
+        spaceId: String,
+        channelId: String
+    ): OmaOuterClass.GetVideoRelayResponse? {
+        return try {
+            val req = OmaOuterClass.GetVideoRelayRequest.newBuilder()
+                .setSpaceId(spaceId)
+                .setChannelId(channelId)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.getVideoRelay(req)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
 
 }

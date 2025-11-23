@@ -47,4 +47,5 @@
     <string name="delete">Delete</string>
     <string name="recent_files">Recent files</string>
     <string name="change_output">change output</string>
+    <string name="screen_record">screen record</string>
 </resources>
