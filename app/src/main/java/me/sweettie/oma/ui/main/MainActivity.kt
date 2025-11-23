@@ -17,6 +17,7 @@ import android.view.Window
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.GestureDetectorCompat
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.google.android.gms.tasks.OnCompleteListener
@@ -24,7 +25,6 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.network.GrpcClient
@@ -33,6 +33,7 @@ import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.SessionState
 import proto.OmaOuterClass
 import kotlin.math.abs
+
 
 
 class MainActivity : AppCompatActivity() {
@@ -45,7 +46,6 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
-        SessionManager.applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -107,6 +107,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         SessionManager.saveState(SessionState.MAIN)
+        SessionManager.viewModel = ViewModelProvider(this)[MainViewModel::class]
         window?.apply {
             statusBarColor = Color.TRANSPARENT
         }
@@ -155,6 +156,7 @@ class MainActivity : AppCompatActivity() {
                 val channelId = intent.getStringExtra("channelID")
                 val s = SessionManager.getServerBySpaceId(spaceId!!) ?: return
                 val c = s.hashChannels[channelId!!] ?: return
+                SessionManager.selectedServer = s
                 val action = if (c.type.equals(OmaOuterClass.ChannelType.TEXT)) {
                     HomeFragmentDirections.actionHomeToChat(
                         channelId = c.id,
@@ -167,10 +169,10 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
                 navController.navigate(action)
+
+
             }
         }
-
-
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

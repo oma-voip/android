@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Resources
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
@@ -19,6 +20,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
+import kotlin.math.roundToInt
 
 
 fun EditText.onTextUpdate(afterTextChanged: (String) -> Unit) {
@@ -128,4 +130,15 @@ fun String.HexToByteArray(): ByteArray {
     return ByteArray(length / 2) { i ->
         substring(i * 2, i * 2 + 2).toInt(16).toByte()
     }
+}
+
+
+fun Context.toPx(dp: Int): Float = TypedValue.applyDimension(
+    TypedValue.COMPLEX_UNIT_DIP,
+    dp.toFloat(),
+    resources.displayMetrics
+)
+
+fun Int.toDp(): Int {
+    return (this * Resources.getSystem().displayMetrics.density).roundToInt()
 }

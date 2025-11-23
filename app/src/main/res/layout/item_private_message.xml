@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="15dp"
+    android:padding="4dp">
+
+    <com.devrj.superellipse.SuperEllipseImageView
+        android:id="@+id/tv_server_ellipse"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_gravity="center"
+        android:gravity="center"
+        app:shapeBackgroundColor="@color/colorContrastBackground"
+
+        app:shapeBorderWidth="0dp" />
+
+    <ImageView
+        android:id="@+id/tv_server_letter"
+        android:layout_width="25dp"
+        android:layout_height="25dp"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:src="@drawable/ic_member"
+        android:textStyle="bold"
+        app:tint="@color/white" />
+
+
+    <TextView
+        android:id="@+id/badge"
+        android:layout_width="25dp"
+        android:layout_height="25dp"
+        android:background="@drawable/badge_server_bg"
+        android:gravity="center"
+        android:textColor="@color/white"
+        android:visibility="gone" />
+</FrameLayout>

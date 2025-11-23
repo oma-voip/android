@@ -108,7 +108,7 @@ class UpdateActivity : AppCompatActivity() {
     }
 
     private suspend fun logic() {
-        val token: String? = SecurePrefs.sf.getString("token", null)
+        val token: String? = SecurePrefs.sf!!.getString("token", null)
 //                val token: String? = null //only for test login activity
         if (token != null) {
             SessionManager.token = token

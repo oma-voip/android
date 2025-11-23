@@ -32,6 +32,7 @@ class MainViewModel : ViewModel() {
             .launchIn(viewModelScope) // ← запускает корутину, отменяет при onCleared()
     }
 
+
     private fun handleEvent(event: OmaOuterClass.Event) {
         println("New Event: ${event.eventCase}")
         when (event.eventCase) {
@@ -71,12 +72,25 @@ class MainViewModel : ViewModel() {
 
             OmaOuterClass.Event.EventCase.MESSAGERECEIVED -> {
                 val message = event.messageReceived.message
+                if (SessionManager.lastMessage != null && SessionManager.lastMessage!!.id == message.id) {
+                    println("Dissmiss message becouse it is copy of last message ")
+                    return
+                }
+                val temp = SessionManager.unreadedMessages.getOrDefault(
+                    event.messageReceived.spaceId,
+                    arrayListOf()
+                )
+                temp.add(event.messageReceived.channelId)
+                SessionManager.unreadedMessages.put(event.messageReceived.spaceId, temp)
                 println("💬 MESSAGE_RECEIVED: ${message.text} from ${message.userId}")
                 message.attachmentsList.forEach {
-                    println("File with id ${it.id} and content.size() = ${it.preview.content.size()}")
+                    println("File with id ${it.id} and content.size() = ${it.imagePreview.content.size()}")
                 }
                 _uiState.value = UiState.NewMessage(event.messageReceived)
+                SessionManager.lastMessage = message
+
             }
+
 
             OmaOuterClass.Event.EventCase.CHANNELJOINED -> {
                 val channel = event.channelJoined
@@ -170,7 +184,10 @@ class MainViewModel : ViewModel() {
             else -> {
                 println("❓ Необработанное событие: ${event.eventCase}")
             }
+
+
         }
+
     }
 
     sealed class UiState {
@@ -186,4 +203,7 @@ class MainViewModel : ViewModel() {
         data class StreamEnded(val userID: String) : UiState()
         data class ThumbNail(val thumbnail: OmaOuterClass.Thumbnail) : UiState()
     }
+
+
 }
+

@@ -2,7 +2,7 @@ package me.sweettie.oma.ui
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -67,7 +67,7 @@ class StartUp : AppCompatActivity() {
     }
 
     private suspend fun logic() {
-        val token: String? = SecurePrefs.sf.getString("token", null)
+        val token: String? = SecurePrefs.sf!!.getString("token", null)
 //                val token: String? = null //only for test login activity
         if (token != null) {
             SessionManager.token = token
@@ -82,13 +82,29 @@ class StartUp : AppCompatActivity() {
                 val servers = arrayListOf<Server>()
                 println("Init servers: ${t.spacesList.size}")
                 t.spacesList.forEach {
+                    println("STARTUP: prepear server with id ${it.id}")
                     servers.add(Server(it))
 
                 }
                 SessionManager.servers = servers
 
                 keepSplash = false
-                Utils.openActivity(this@StartUp, MainActivity::class.java)
+                val intent2 = Intent(this@StartUp, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP and Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                }
+                if (intent.action != null) {
+                    if (intent.action == "START_ACTIVITY") {
+                        val spaceId = intent.getStringExtra("spaceID")
+                        val server = SessionManager.getServerBySpaceId(spaceId!!)
+                        if (server != null) {
+                            server.loadAllNecessaryInfo()
+                            intent2.action = "START_ACTIVITY"
+                            intent2.putExtra("spaceID", spaceId)
+                            intent2.putExtra("channelID", intent.getStringExtra("channelID"))
+                        }
+                    }
+                }
+                this@StartUp.startActivity(intent2)
                 return
             }
         }
@@ -118,7 +134,7 @@ class StartUp : AppCompatActivity() {
             description = "Channel for default notifications"
         }
         val notificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
     }
 }

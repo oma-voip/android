@@ -19,7 +19,6 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import kotlinx.coroutines.Job
@@ -48,7 +47,6 @@ class VoiceChatFragment : Fragment() {
     private var _binding: FragmentVoiceChatBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var viewModel: MainViewModel
 
 
     override fun onCreateView(
@@ -82,13 +80,16 @@ class VoiceChatFragment : Fragment() {
             navController.navigate(action)
         }
 
-        binding.channelName.text =
-            "voice \"${SessionManager.selectedServer!!.hashChannels[args.channelId]!!.name}\""
+        if (SessionManager.selectedServer!!.space.private) {
+            binding.channelName.text = SessionManager.selectedServer!!.space.name
+        } else {
+            binding.channelName.text =
+                "voice \"${SessionManager.selectedServer!!.hashChannels[args.channelId]!!.name}\""
+        }
         renderVoiceMembers()
 
-        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
+            SessionManager.viewModel.uiState.collect { state ->
                 when (state) {
                     is MainViewModel.UiState.ChannelJoined -> {
                         if (SessionManager.selectedServer != null) {
