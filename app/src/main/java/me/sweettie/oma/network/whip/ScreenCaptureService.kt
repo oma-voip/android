@@ -30,6 +30,7 @@ class ScreenCaptureService : Service() {
         const val NOTIF_ID = 4242
     }
 
+    private var isCamera: Boolean = false
     private var streamer: WHIPPublisher? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -40,30 +41,41 @@ class ScreenCaptureService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
-                val data = intent.getParcelableExtra<Intent>(EXTRA_RESULT_INTENT)
+                val useCamera = intent.getBooleanExtra("isCamera", false)
                 val whipUrl = intent.getStringExtra(EXTRA_WHIP_URL) ?: ""
                 val auth = intent.getStringExtra(EXTRA_AUTH)
 
-                // Build notification channel & notification
                 createNotificationChannelIfNeeded()
                 val notification = buildNotification()
+                var fgType = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                if (useCamera) {
+                    fgType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+                    else
+                        0
+                }
 
-                startForeground(
-                    NOTIF_ID,
-                    notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
-                )
 
-                if (resultCode == Activity.RESULT_OK && data != null) {
-                    // init streamer with service context
-                    streamer = WHIPPublisher(this, whipUrl, auth)
-                    streamer?.initialize()
-                    // IMPORTANT: now safe to start capture since service is foreground
-                    streamer?.startScreenShare(resultCode, data)
+                startForeground(NOTIF_ID, notification, fgType)
+
+                streamer = WHIPPublisher(this, whipUrl, auth)
+                streamer?.initialize()
+
+                if (useCamera) {
+                    streamer?.startCameraShare(
+                        width = 1280,
+                        height = 720,
+                        fps = 30,
+                        preferFront = true
+                    )
                 } else {
-                    // Invalid parameters - stop service
-                    stopSelf()
+                    val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
+                    val data = intent.getParcelableExtra<Intent>(EXTRA_RESULT_INTENT)
+                    if (resultCode == Activity.RESULT_OK && data != null) {
+                        streamer?.startScreenShare(resultCode, data)
+                    } else {
+                        stopSelf()
+                    }
                 }
             }
 
@@ -80,7 +92,7 @@ class ScreenCaptureService : Service() {
 
 
     private fun stopSelfGracefully() {
-        streamer?.stop()
+        streamer?.stopBlocking()
         streamer?.release()
         streamer = null
         stopForeground(true)

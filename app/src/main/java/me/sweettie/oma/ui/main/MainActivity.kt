@@ -7,6 +7,8 @@ import android.R.attr
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.net.ConnectivityManager
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -33,7 +35,6 @@ import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.SessionState
 import proto.OmaOuterClass
 import kotlin.math.abs
-
 
 
 class MainActivity : AppCompatActivity() {
@@ -173,6 +174,13 @@ class MainActivity : AppCompatActivity() {
 
             }
         }
+
+
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val req = NetworkRequest.Builder()
+            .addTransportType(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)
+            .build()
+        cm.requestNetwork(req, SessionManager.networkCallback)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

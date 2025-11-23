@@ -212,6 +212,8 @@ class VoipForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
+
+
                 startForeground(NOTIF_ID, buildNotification("Starting VoIP relay..."))
                 AudioFragmentManager.clear()
 
@@ -266,13 +268,14 @@ class VoipForegroundService : Service() {
         return START_STICKY
     }
 
+
     private fun startUdp(addressWithPort: String) {
         val (host, port) = UdpClient.parseAddress(addressWithPort)
 
         udpClient?.stop()
         udpClient = UdpClient(host, port)
 
-        udpClient?.startListening { data, len ->
+        udpClient!!.currentOnReceiveCallback = { data, len ->
             serviceScope.launch {
                 try {
                     val decrypted = try {
@@ -280,6 +283,11 @@ class VoipForegroundService : Service() {
                     } catch (_: Exception) {
                         data
                     }
+                    println(
+                        "${decrypted.startsWith(UdpHeaders.CONNECTED_RESPONSE.s)} - CONNECT RESPONSE\n" +
+                                "${decrypted.startsWith(UdpHeaders.DISCONNECTED_RESPONSE.s)}\n" +
+                                "${decrypted.startsWith(UdpHeaders.PING_RESPONSE.s)} DECRYPTED"
+                    )
                     when {
                         decrypted.startsWith(UdpHeaders.CONNECTED_RESPONSE.s) -> {
                             if (!isConnectedToRelay) {
@@ -367,6 +375,22 @@ class VoipForegroundService : Service() {
                 }
             }
         }
+
+
+//        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+//        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+//            override fun onAvailable(network: Network) {
+//                if(udpClient!!.isInit)
+//                    startUdp(addressWithPort)
+//            }
+//            override fun onLost(network: Network) {
+////                udpClient?.onNetworkLost(network)
+//            }
+//        }
+//        cm.registerDefaultNetworkCallback(networkCallback)
+
+
+        udpClient?.startListening(udpClient!!.currentOnReceiveCallback)
 
         serviceScope.launch {
             delay(150)

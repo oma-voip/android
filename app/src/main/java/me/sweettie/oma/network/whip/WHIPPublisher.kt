@@ -13,6 +13,7 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
+import org.webrtc.CameraVideoCapturer
 import org.webrtc.DataChannel
 import org.webrtc.DefaultVideoDecoderFactory
 import org.webrtc.DefaultVideoEncoderFactory
@@ -34,7 +35,9 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.ProtocolException
 import java.net.URL
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 class WHIPPublisher(
@@ -51,6 +54,7 @@ class WHIPPublisher(
     private var videoSource: VideoSource? = null
     private var videoTrack: VideoTrack? = null
     private var screenCapturer: ScreenCapturerAndroid? = null
+    private var cameraCapturer: CameraVideoCapturer? = null
 
     @Volatile
     private var resourceUrl: String? = null
@@ -63,7 +67,6 @@ class WHIPPublisher(
 
     private val executor = Executors.newSingleThreadExecutor()
 
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     @RequiresApi(Build.VERSION_CODES.Q)
     fun initialize() {
         val initOptions =
@@ -73,6 +76,142 @@ class WHIPPublisher(
         PeerConnectionFactory.initialize(initOptions)
 
 
+    }
+
+    private fun createCameraCapturer(preferFront: Boolean = true): CameraVideoCapturer? {
+        return try {
+            val enumerator =
+                if (org.webrtc.Camera2Enumerator.isSupported(context)) org.webrtc.Camera2Enumerator(
+                    context
+                )
+                else org.webrtc.Camera1Enumerator(true)
+
+            val deviceNames = enumerator.deviceNames.toList()
+
+            // сначала ищем предпочтительную камеру
+            val preferred = deviceNames.firstOrNull {
+                val isFront = enumerator.isFrontFacing(it)
+                if (preferFront) isFront else !isFront
+            }
+            if (preferred != null) enumerator.createCapturer(preferred, null)
+            else deviceNames.firstOrNull()?.let { enumerator.createCapturer(it, null) }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun startCameraShare(
+        width: Int = 1280,
+        height: Int = 720,
+        fps: Int = 30,
+        preferFront: Boolean = true
+    ) {
+        executor.execute {
+            // инициализация фабрики должна быть выполнена ранее (initialize)
+            if (factory == null) {
+                val encoderFactory = DefaultVideoEncoderFactory(eglBase.eglBaseContext, true, true)
+                val decoderFactory = DefaultVideoDecoderFactory(eglBase.eglBaseContext)
+
+                factory = PeerConnectionFactory.builder()
+                    .setOptions(PeerConnectionFactory.Options())
+                    .setAudioDeviceModule(
+                        JavaAudioDeviceModule.builder(context)
+                            .setUseHardwareNoiseSuppressor(false)
+                            .setUseHardwareAcousticEchoCanceler(false)
+                            .createAudioDeviceModule()
+                    )
+                    .setVideoEncoderFactory(encoderFactory)
+                    .setVideoDecoderFactory(decoderFactory)
+                    .createPeerConnectionFactory()
+                if (factory == null) {
+                    println("Failed to create PeerConnectionFactory")
+                    return@execute
+                }
+            }
+
+            createPeerConnectionIfNeeded()
+
+            surfaceTextureHelper =
+                SurfaceTextureHelper.create("CameraCaptureThread", eglBase.eglBaseContext)
+            // для камеры isScreencast = false
+            videoSource = factory!!.createVideoSource(false)
+
+            cameraCapturer = createCameraCapturer(preferFront)
+            if (cameraCapturer == null) {
+                println("No camera capturer available")
+                return@execute
+            }
+
+            cameraCapturer!!.initialize(
+                surfaceTextureHelper,
+                context.applicationContext,
+                videoSource!!.capturerObserver
+            )
+            try {
+                cameraCapturer!!.startCapture(width, height, fps)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                println("Failed to start camera capture")
+                return@execute
+            }
+            videoTrack = factory!!.createVideoTrack("ARDAMSv0", videoSource)
+            videoTrack!!.setEnabled(true)
+            peerConnection!!.addTrack(videoTrack, listOf("camera"))
+
+//            // если нужен звук — создаём аудио трек
+//            try {
+//                val audioSource = factory!!.createAudioSource(MediaConstraints())
+//                val audioTrack = factory!!.createAudioTrack("ARDAMSa0", audioSource)
+//                audioTrack.setEnabled(true)
+//                peerConnection!!.addTrack(audioTrack, listOf("audio"))
+//            } catch (e: Exception) {
+//                // ignore если нет разрешений
+//            }
+
+            // Настроить sender параметры и создать offer как раньше
+            val sender = peerConnection!!.senders.find { it.track()?.kind() == "video" }
+            sender?.let { s ->
+                val params = s.parameters
+                params.encodings.forEach { enc ->
+                    enc.maxBitrateBps = 2_000_000
+                    enc.maxFramerate = fps
+                    enc.scaleResolutionDownBy = 1.0
+                    enc.active = true
+                }
+                s.parameters = params
+            }
+
+            val mediaConstraints = MediaConstraints().apply {
+                mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "false"))
+                mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"))
+            }
+            peerConnection!!.createOffer(object : SdpObserver {
+                override fun onCreateSuccess(desc: SessionDescription?) {
+                    if (desc == null) return
+                    peerConnection!!.setLocalDescription(object : SdpObserver {
+                        override fun onSetSuccess() {
+                            executor.execute { sendOfferToWhip(desc) }
+                        }
+
+                        override fun onSetFailure(p0: String?) {
+                            println("setLocalDescription failed: $p0")
+                        }
+
+                        override fun onCreateSuccess(p0: SessionDescription?) {}
+                        override fun onCreateFailure(p0: String?) {}
+                    }, desc)
+                }
+
+                override fun onCreateFailure(error: String?) {
+                    println("createOffer failed: $error")
+                }
+
+                override fun onSetSuccess() {}
+                override fun onSetFailure(p0: String?) {}
+            }, mediaConstraints)
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
@@ -135,7 +274,7 @@ class WHIPPublisher(
                 ScreenCapturerAndroid(data, object : MediaProjection.Callback() {
                     override fun onStop() {
                         println("MediaProjection stopped")
-                        stop()
+                        stopBlocking()
                     }
                 })
 
@@ -291,8 +430,8 @@ class WHIPPublisher(
         try {
             val url = URL(whipUrl)
             conn = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 15_000
-                readTimeout = 15_000
+                connectTimeout = 5_000
+                readTimeout = 5_000
                 doOutput = true
                 requestMethod = "POST"
                 setRequestProperty("Content-Type", "application/sdp")
@@ -430,8 +569,8 @@ class WHIPPublisher(
         try {
             val url = URL(res)
             conn = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 10_000
-                readTimeout = 10_000
+                connectTimeout = 5_000
+                readTimeout = 5_000
                 doOutput = true
                 try {
                     requestMethod = "PATCH"
@@ -501,12 +640,95 @@ class WHIPPublisher(
 
     // ----------------- Lifecycle -----------------
 
+    fun stopBlocking(timeoutMs: Long = 500) {
+        val latch = CountDownLatch(1)
+        executor.execute {
+            try {
+                // 1) остановить захват
+                try {
+                    cameraCapturer?.stopCapture()
+                } catch (e: Exception) {
+                }
+                try {
+                    screenCapturer?.stopCapture()
+                } catch (e: Exception) {
+                }
+                // 3) close peerConnection
+                try {
+                    peerConnection?.close()
+                } catch (e: Exception) {
+                }
+
+                // 5) треки/источники
+                try {
+                    videoTrack?.setEnabled(false)
+                } catch (e: Exception) {
+                }
+                try {
+                    videoTrack?.dispose()
+                } catch (e: Exception) {
+                }
+                videoTrack = null
+                try {
+                    videoSource?.dispose()
+                } catch (e: Exception) {
+                }
+                videoSource = null
+                // 6) surfaceTextureHelper
+                try {
+                    surfaceTextureHelper?.dispose()
+                } catch (e: Exception) {
+                }
+                surfaceTextureHelper = null
+                // 7) capturers dispose
+                try {
+                    cameraCapturer?.dispose()
+                } catch (e: Exception) {
+                }
+                cameraCapturer = null
+                screenCapturer = null
+                // 8) фабрика и egl
+                try {
+                    factory?.dispose()
+                } catch (e: Exception) {
+                }
+                factory = null
+                try {
+                    eglBase.release()
+                } catch (e: Exception) {
+                }
+
+                // 4) dispose peerConnection (если нужно)
+                try {
+                    peerConnection?.dispose()
+                } catch (e: Exception) {
+                }
+                peerConnection = null
+
+                // 9) DELETE resource
+//                resourceUrl?.let { url ->
+//                    // request DELETE on resource if server supports it
+//                    executor.execute { deleteResource(url) }
+//                }
+            } finally {
+                latch.countDown()
+                println("FINAL DESTROY")
+            }
+        }
+        try {
+            latch.await(timeoutMs, TimeUnit.MILLISECONDS)
+        } catch (e: InterruptedException) { /* ignore */
+        }
+    }
     fun stop() {
         executor.execute {
             try {
                 screenCapturer?.stopCapture()
+                cameraCapturer?.stopCapture()
             } catch (e: Exception) { /* ignore */
             }
+            cameraCapturer = null
+            screenCapturer = null
             videoTrack?.setEnabled(false)
             videoTrack = null
             videoSource?.dispose()
@@ -524,10 +746,7 @@ class WHIPPublisher(
     }
 
     fun release() {
-        stop()
-        factory?.dispose()
-        factory = null
-        eglBase.release()
+        stopBlocking()
         executor.shutdown()
     }
 }
