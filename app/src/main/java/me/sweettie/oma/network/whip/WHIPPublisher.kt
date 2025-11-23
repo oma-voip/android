@@ -23,6 +23,7 @@ import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.RtpReceiver
+import org.webrtc.ScreenCapturerAndroid
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceTextureHelper
@@ -49,7 +50,7 @@ class WHIPPublisher(
     private var surfaceTextureHelper: SurfaceTextureHelper? = null
     private var videoSource: VideoSource? = null
     private var videoTrack: VideoTrack? = null
-    private var screenCapturer: me.sweettie.oma.network.whip.ScreenCapturerAndroid? = null
+    private var screenCapturer: ScreenCapturerAndroid? = null
 
     @Volatile
     private var resourceUrl: String? = null
@@ -117,10 +118,6 @@ class WHIPPublisher(
                 )
                 .setVideoEncoderFactory(encoderFactory)
                 .setVideoDecoderFactory(decoderFactory)
-                .setAudioDeviceModule(
-                    KotlinAudioDeviceModule.builder(context)
-                        .createAudioDeviceModule()
-                )
                 .createPeerConnectionFactory()
 
             if (factory == null) {
@@ -135,7 +132,7 @@ class WHIPPublisher(
             videoSource = factory!!.createVideoSource(true)
 
             screenCapturer =
-                ScreenCapturerAndroid(mediaProjection, data, object : MediaProjection.Callback() {
+                ScreenCapturerAndroid(data, object : MediaProjection.Callback() {
                     override fun onStop() {
                         println("MediaProjection stopped")
                         stop()
@@ -152,10 +149,10 @@ class WHIPPublisher(
             videoTrack!!.setEnabled(true)
 
 
-            val audioSource = factory!!.createAudioSource(MediaConstraints())
-            val audioTrack = factory!!.createAudioTrack("ARDAMSa0", audioSource)
-            audioTrack?.setEnabled(true)
-            peerConnection!!.addTrack(audioTrack, listOf("audio"))
+//            val audioSource = factory!!.createAudioSource(MediaConstraints())
+//            val audioTrack = factory!!.createAudioTrack("ARDAMSa0", audioSource)
+//            audioTrack?.setEnabled(true)
+//            peerConnection!!.addTrack(audioTrack, listOf("audio"))
             peerConnection!!.addTrack(videoTrack, listOf("screen"))
 
             val sender = peerConnection!!.senders.find { it.track()?.kind() == "video" }

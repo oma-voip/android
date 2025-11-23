@@ -33,6 +33,7 @@ import me.sweettie.oma.network.udp.Key
 import me.sweettie.oma.network.udp.Packet
 import me.sweettie.oma.network.udp.UdpClient
 import me.sweettie.oma.network.udp.UdpHeaders
+import me.sweettie.oma.network.whip.ScreenCaptureService
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.utils.HexToByteArray
 import me.sweettie.oma.utils.SessionManager
@@ -238,12 +239,21 @@ class VoipForegroundService : Service() {
                         udpClient?.send(encrypted)
                         udpClient?.stop()
                     }
+
+                    val stopIntent =
+                        Intent(this, ScreenCaptureService::class.java).apply {
+                            action = ScreenCaptureService.ACTION_STOP
+                        }
+                    startService(stopIntent)
+
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
                 stopForeground(true)
                 stopProximityMonitoring()
                 stopSelf()
+
+
             }
 
             ACTION_CHANGE_OUTPUT -> {
