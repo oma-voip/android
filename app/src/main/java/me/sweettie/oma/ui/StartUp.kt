@@ -2,7 +2,6 @@ package me.sweettie.oma.ui
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -95,9 +94,14 @@ class StartUp : AppCompatActivity() {
                 }
                 if (intent.action != null) {
                     if (intent.action == "START_ACTIVITY") {
-                        intent2.action = "START_ACTIVITY"
-                        intent2.putExtra("spaceID", intent.getStringExtra("spaceID"))
-                        intent2.putExtra("channelID", intent.getStringExtra("channelID"))
+                        val spaceId = intent.getStringExtra("spaceID")
+                        val server = SessionManager.getServerBySpaceId(spaceId!!)
+                        if (server != null) {
+                            server.loadAllNecessaryInfo()
+                            intent2.action = "START_ACTIVITY"
+                            intent2.putExtra("spaceID", spaceId)
+                            intent2.putExtra("channelID", intent.getStringExtra("channelID"))
+                        }
                     }
                 }
                 this@StartUp.startActivity(intent2)
@@ -130,7 +134,7 @@ class StartUp : AppCompatActivity() {
             description = "Channel for default notifications"
         }
         val notificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
     }
 }

@@ -156,6 +156,7 @@ class MainActivity : AppCompatActivity() {
                 val channelId = intent.getStringExtra("channelID")
                 val s = SessionManager.getServerBySpaceId(spaceId!!) ?: return
                 val c = s.hashChannels[channelId!!] ?: return
+                SessionManager.selectedServer = s
                 val action = if (c.type.equals(OmaOuterClass.ChannelType.TEXT)) {
                     HomeFragmentDirections.actionHomeToChat(
                         channelId = c.id,
@@ -168,6 +169,8 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
                 navController.navigate(action)
+
+
             }
         }
     }

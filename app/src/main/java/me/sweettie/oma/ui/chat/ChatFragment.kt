@@ -137,7 +137,7 @@ class ChatFragment : Fragment() {
         }
 
         SessionManager.selectedChannel = args.channelId
-        val r = SessionManager.unreadedMessages.get(SessionManager.selectedServer!!.space.id)
+        val r = SessionManager.unreadedMessages[SessionManager.selectedServer?.space?.id]
         if (r != null) {
             r.remove(args.channelId)
             if (r.isEmpty())
