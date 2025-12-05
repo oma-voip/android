@@ -1,9 +1,17 @@
 package me.sweettie.oma.ui
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.telecom.PhoneAccount
+import android.telecom.PhoneAccountHandle
+import android.telecom.TelecomManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
@@ -11,6 +19,7 @@ import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.network.GrpcClient
+import me.sweettie.oma.ui.call.OmaConnectionService
 import me.sweettie.oma.ui.login.LoginActivity
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.register.ConfirmEmailActivity
@@ -43,6 +52,25 @@ class StartUp : AppCompatActivity() {
         SessionManager.loadState()
         SessionManager.cacheManager = AttachmentCacheManager(this, GrpcClient::downloadChunks)
         AttachmentStorage.init(this)
+        registerPhoneAccount(this)
+
+        if (Build.VERSION.SDK_INT >= 34) {
+            requestPermissions(
+                listOf(Manifest.permission.USE_FULL_SCREEN_INTENT).toTypedArray(),
+                10001
+            )
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            if (!notificationManager.canUseFullScreenIntent()) {
+                try {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    println("Error while calling Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)")
+                    e.printStackTrace()
+                }
+            }
+        }
+
         lifecycleScope.launch {
             try {
                 val checker = VersionChecker()
@@ -74,6 +102,7 @@ class StartUp : AppCompatActivity() {
             val user = GrpcClient.getUser("me")
             if (user != null) {
                 SessionManager.currentUser = user
+                SecurePrefs.save("user_id", SessionManager.currentUser!!.id)
 
                 val t = GrpcClient.getServers()
                 if (t == null) {
@@ -93,14 +122,18 @@ class StartUp : AppCompatActivity() {
                     addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP and Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 }
                 if (intent.action != null) {
-                    if (intent.action == "START_ACTIVITY") {
+
+                    if (arrayOf(
+                            "START_ACTIVITY",
+                            "ACTION_OPEN_VOICE_CHAT"
+                        ).contains(intent.action)
+                    ) {
                         val spaceId = intent.getStringExtra("spaceID")
                         val server = SessionManager.getServerBySpaceId(spaceId!!)
                         if (server != null) {
                             server.loadAllNecessaryInfo()
-                            intent2.action = "START_ACTIVITY"
-                            intent2.putExtra("spaceID", spaceId)
-                            intent2.putExtra("channelID", intent.getStringExtra("channelID"))
+                            intent2.action = intent.action
+                            intent2.putExtras(intent.extras!!)
                         }
                     }
                 }
@@ -124,6 +157,20 @@ class StartUp : AppCompatActivity() {
             else -> Utils.openActivity(this@StartUp, LoginActivity::class.java)
 
         }
+    }
+
+    fun registerPhoneAccount(context: Context) {
+        val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+        val componentName = ComponentName(context, OmaConnectionService::class.java)
+
+        // Уникальный ID для вашего аккаунта
+        val phoneAccountHandle = PhoneAccountHandle(componentName, "oma_app_id")
+
+        val phoneAccount = PhoneAccount.builder(phoneAccountHandle, "Oma VoIP")
+            .setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED) // ВАЖНО: Мы управляем звонком сами
+            .build()
+
+        telecomManager.registerPhoneAccount(phoneAccount)
     }
 
     private fun createNotificationChannel() {

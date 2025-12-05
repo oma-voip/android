@@ -31,7 +31,6 @@ import me.sweettie.oma.databinding.FragmentVoiceChatBinding
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.network.services.voip.VoipForegroundService
 import me.sweettie.oma.network.whip.ScreenCaptureService
-import me.sweettie.oma.ui.chat.ChatFragmentArgs
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.main.MainViewModel
 import me.sweettie.oma.ui.webrtc.WebRtcPlayerActivity
@@ -58,13 +57,13 @@ class VoiceChatFragment : Fragment() {
         return binding.root
     }
 
-    private val args: ChatFragmentArgs by navArgs()
+    private val args: VoiceChatFragmentArgs by navArgs()
 
 
     @SuppressLint("SetTextI18n", "ServiceCast")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        SessionManager.selectedChannel = args.channelId
         binding.backBtn.setOnClickListener {
             val navController =
                 (activity as? MainActivity)?.navController ?: return@setOnClickListener
@@ -292,6 +291,10 @@ class VoiceChatFragment : Fragment() {
             changeBottomState()
             startCallTimer()
             startSpeakingIndicatorWorker()
+        }
+
+        if (args.join) {
+            binding.btnJoinCall.callOnClick()
         }
     }
 

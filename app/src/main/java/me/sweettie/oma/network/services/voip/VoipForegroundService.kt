@@ -274,7 +274,7 @@ class VoipForegroundService : Service() {
 
         udpClient?.stop()
         udpClient = UdpClient(host, port)
-
+        println("host: $host; port: $port")
         udpClient!!.currentOnReceiveCallback = { data, len ->
             serviceScope.launch {
                 try {
@@ -283,11 +283,6 @@ class VoipForegroundService : Service() {
                     } catch (_: Exception) {
                         data
                     }
-                    println(
-                        "${decrypted.startsWith(UdpHeaders.CONNECTED_RESPONSE.s)} - CONNECT RESPONSE\n" +
-                                "${decrypted.startsWith(UdpHeaders.DISCONNECTED_RESPONSE.s)}\n" +
-                                "${decrypted.startsWith(UdpHeaders.PING_RESPONSE.s)} DECRYPTED"
-                    )
                     when {
                         decrypted.startsWith(UdpHeaders.CONNECTED_RESPONSE.s) -> {
                             if (!isConnectedToRelay) {

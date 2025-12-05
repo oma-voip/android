@@ -5,6 +5,7 @@ package me.sweettie.oma.ui.main
 import android.Manifest
 import android.R.attr
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.ConnectivityManager
@@ -20,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.GestureDetectorCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.google.android.gms.tasks.OnCompleteListener
@@ -151,6 +153,17 @@ class MainActivity : AppCompatActivity() {
 
         })
 
+        handleIncomingIntent(intent)
+
+
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val req = NetworkRequest.Builder()
+            .addTransportType(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)
+            .build()
+        cm.requestNetwork(req, SessionManager.networkCallback)
+    }
+
+    private fun handleIncomingIntent(intent: Intent) {
         if (intent.action != null) {
             if (intent.action == "START_ACTIVITY") {
                 val spaceId = intent.getStringExtra("spaceID")
@@ -172,15 +185,38 @@ class MainActivity : AppCompatActivity() {
                 navController.navigate(action)
 
 
+            } else if (intent.action == "ACTION_OPEN_VOICE_CHAT") {
+                val spaceId = intent.getStringExtra("spaceID")
+                val channelId = intent.getStringExtra("channelID")
+                println("OPEN VOICE CHAT WITH spaceId=$spaceId; channelID=$channelId")
+                val s = SessionManager.getServerBySpaceId(spaceId!!) ?: return
+                val c = s.hashChannels[channelId!!]
+                if (c == null) {
+                    println("Hash null, loading and re run action...")
+                    lifecycleScope.launch {
+                        s.loadAllNecessaryInfo()
+                        handleIncomingIntent(intent)
+                    }
+                    return
+                }
+                println("Loading new view")
+                SessionManager.selectedServer = s
+                val action = HomeFragmentDirections.actionHomeToVoicechat(
+                    channelId = c.id,
+                    serverId = s.space.id,
+                    join = true
+                )
+
+                navController.navigate(action)
             }
         }
+    }
 
-
-        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        val req = NetworkRequest.Builder()
-            .addTransportType(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)
-            .build()
-        cm.requestNetwork(req, SessionManager.networkCallback)
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent != null)
+            handleIncomingIntent(intent)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

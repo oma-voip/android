@@ -60,6 +60,8 @@
             android:name="serverId"
             app:argType="string"
             app:nullable="false" />
+
+
         <action
             android:id="@+id/action_chatFragment_to_voiceChatFragment"
             app:destination="@id/voiceChatFragment"
@@ -118,6 +120,12 @@
             android:name="serverId"
             app:argType="string"
             app:nullable="false" />
+
+        <argument
+            android:name="join"
+            app:argType="boolean"
+            app:nullable="false"
+            android:defaultValue="false" />
 
     </fragment>
 

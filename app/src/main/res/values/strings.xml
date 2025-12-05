@@ -48,4 +48,8 @@
     <string name="recent_files">Recent files</string>
     <string name="change_output">change output</string>
     <string name="screen_record">screen record</string>
+    <string name="accept_call">accept call</string>
+    <string name="accept">call</string>
+    <string name="decline">decline</string>
+    <string name="incoming_call">Incoming call…</string>
 </resources>
