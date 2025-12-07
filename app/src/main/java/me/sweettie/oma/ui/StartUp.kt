@@ -96,7 +96,7 @@ class StartUp : AppCompatActivity() {
 
     private suspend fun logic() {
         val token: String? = SecurePrefs.sf!!.getString("token", null)
-//                val token: String? = null //only for test login activity
+//        val token: String? = null //only for test login activity
         if (token != null) {
             SessionManager.token = token
             val user = GrpcClient.getUser("me")
@@ -163,11 +163,10 @@ class StartUp : AppCompatActivity() {
         val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
         val componentName = ComponentName(context, OmaConnectionService::class.java)
 
-        // Уникальный ID для вашего аккаунта
         val phoneAccountHandle = PhoneAccountHandle(componentName, "oma_app_id")
 
         val phoneAccount = PhoneAccount.builder(phoneAccountHandle, "Oma VoIP")
-            .setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED) // ВАЖНО: Мы управляем звонком сами
+            .setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
             .build()
 
         telecomManager.registerPhoneAccount(phoneAccount)

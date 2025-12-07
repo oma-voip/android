@@ -2,6 +2,9 @@ package me.sweettie.oma.utils
 
 import android.net.ConnectivityManager
 import android.net.Network
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import me.sweettie.oma.data.MessageList
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.data.Streamer
@@ -33,6 +36,9 @@ object SessionManager {
         }
     }
     lateinit var viewModel: MainViewModel
+    lateinit var appScope: CoroutineScope
+    private val _isForgeground = MutableStateFlow(false)
+    val isForgeground = _isForgeground.asStateFlow()
     var isWatchStream = false
     val unreadedMessages: HashMap<String, ArrayList<String>> = HashMap()
     val mutedStates: HashMap<String, Boolean> = HashMap()

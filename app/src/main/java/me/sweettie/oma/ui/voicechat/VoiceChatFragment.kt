@@ -64,6 +64,7 @@ class VoiceChatFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         SessionManager.selectedChannel = args.channelId
+
         binding.backBtn.setOnClickListener {
             val navController =
                 (activity as? MainActivity)?.navController ?: return@setOnClickListener
@@ -85,6 +86,7 @@ class VoiceChatFragment : Fragment() {
             binding.channelName.text =
                 "voice \"${SessionManager.selectedServer!!.hashChannels[args.channelId]!!.name}\""
         }
+
         renderVoiceMembers()
 
         viewLifecycleOwner.lifecycleScope.launch {
