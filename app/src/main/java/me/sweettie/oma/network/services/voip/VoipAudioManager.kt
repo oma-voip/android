@@ -9,10 +9,12 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import eu.buney.kopus.OpusApplication
 import eu.buney.kopus.OpusDecoder
 import eu.buney.kopus.OpusEncoder
+import eu.buney.kopus.encode
 import eu.buney.kopus.setDTX
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +26,7 @@ import me.sweettie.oma.utils.Utils.getDeviceByType
 import java.util.UUID
 
 class VoipAudioManager(private val context: Context) {
-
+    private val opusLock = Any()
     private val sampleRate = 48000
     private val channels = 1
     val frameSize = 960
@@ -102,32 +104,32 @@ class VoipAudioManager(private val context: Context) {
 
 
     }
-
-
     private fun initOpus() {
-        opusEncoder = try {
-            OpusEncoder(
-                sampleRate = sampleRate,
-                channels = channels,
-                application = OpusApplication.Voip,
-            ).apply {
-                setDTX(1)
-
+        synchronized(opusLock) {
+            opusEncoder = try {
+                OpusEncoder(
+                    sampleRate = sampleRate,
+                    channels = channels,
+                    application = OpusApplication.Voip,
+                ).apply {
+                    setDTX(1)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
         }
     }
 
     private fun destroyOpus() {
-        try {
-            opusEncoder?.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
+        synchronized(opusLock) {
+            try {
+                opusEncoder?.close()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            opusEncoder = null
         }
-        opusEncoder = null
-
         destroyAllDecoders()
     }
 
@@ -229,6 +231,22 @@ class VoipAudioManager(private val context: Context) {
             am.mode = if (enable) AudioManager.MODE_IN_COMMUNICATION else AudioManager.MODE_NORMAL
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    fun encodeSync(buffer: ShortArray): ByteArray? {
+        // простая валидация размера
+        if (buffer.size != frameSize) {
+            Log.w("VoipAudioManager", "Invalid buffer size ${buffer.size}, expected $frameSize")
+            return null
+        }
+        synchronized(opusLock) {
+            return try {
+                opusEncoder?.encode(buffer)
+            } catch (t: Throwable) {
+                t.printStackTrace()
+                null
+            }
         }
     }
 

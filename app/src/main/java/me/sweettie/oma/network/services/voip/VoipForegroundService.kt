@@ -20,7 +20,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import eu.buney.kopus.OpusDecoder
 import eu.buney.kopus.decode
-import eu.buney.kopus.encode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -73,10 +72,11 @@ class VoipForegroundService : Service() {
                 if (it.value.isNotEmpty())
                     buffers.add(it.value.removeAt(0))
                 else {
-                    decoders[it.key]?.decode(empt[0], 960)
+                    buffers.add(ShortArray(FRAME_SIZE).apply { fill(0) })
+//                    decoders[it.key]?.decode(empt[0], 960)
                 }
             }
-            if (buffers.isEmpty()) return ShortArray(960).apply { fill(0) }
+            if (buffers.isEmpty()) return ShortArray(FRAME_SIZE).apply { fill(0) }
             val output = ShortArray(FRAME_SIZE)
             output.fill(0)
 
@@ -92,6 +92,7 @@ class VoipForegroundService : Service() {
                         }
                     }
                 } catch (_: Exception) {
+                    return ShortArray(FRAME_SIZE).apply { fill(0) }
                 }
             }
             return output
@@ -325,6 +326,8 @@ class VoipForegroundService : Service() {
                                 return@launch
                             }
                             val (senderId, opusPayload) = parsed
+                            val decoder =
+                                audioManager!!.getOrCreateDecoder(senderId!!) ?: return@launch
                             if (opusPayload.isEmpty()) {
                                 println("Dropped empty opus payload from $senderId")
                                 return@launch
@@ -333,16 +336,13 @@ class VoipForegroundService : Service() {
                                 println("Suspicious large opus payload: ${opusPayload.size}")
                                 return@launch
                             }
-                            val decoder =
-                                audioManager!!.getOrCreateDecoder(senderId!!) ?: return@launch
                             val pcm = decoder.decode(
                                 opusPayload,
                                 audioManager!!.frameSize
                             )
-                            val f = AudioFragmentManager.addAudio(senderId, pcm, decoder)
-                            if (f) {
+                            if (AudioFragmentManager.audios.isEmpty()) {
                                 val encoded = try {
-                                    audioManager!!.opusEncoder?.encode(ShortArray(960).apply {
+                                    audioManager!!.encodeSync(ShortArray(audioManager!!.frameSize).apply {
                                         fill(
                                             0
                                         )
@@ -353,6 +353,8 @@ class VoipForegroundService : Service() {
                                 }
                                 AudioFragmentManager.setSilence(encoded)
                             }
+                            AudioFragmentManager.addAudio(senderId, pcm, decoder)
+
                         }
 
                         else -> {
@@ -527,7 +529,7 @@ class VoipForegroundService : Service() {
 
     private suspend fun processAndSendAudio(buffer: ShortArray) {
         val encoded = try {
-            audioManager!!.opusEncoder?.encode(buffer) ?: return
+            audioManager!!.encodeSync(buffer) ?: return
         } catch (e: Exception) {
             e.printStackTrace()
             return
