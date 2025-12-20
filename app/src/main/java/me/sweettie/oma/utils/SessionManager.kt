@@ -35,6 +35,8 @@ object SessionManager {
         override fun onLost(network: Network) {
         }
     }
+
+    var lastPingTime: Long = System.currentTimeMillis()
     lateinit var viewModel: MainViewModel
     lateinit var appScope: CoroutineScope
     private val _isForgeground = MutableStateFlow(false)

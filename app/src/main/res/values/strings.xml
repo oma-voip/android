@@ -52,4 +52,5 @@
     <string name="accept">call</string>
     <string name="decline">decline</string>
     <string name="incoming_call">Incoming call…</string>
+    <string name="fetching_update">Fetching update…</string>
 </resources>
