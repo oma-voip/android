@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:background="@color/transparent"
+    android:paddingTop="@dimen/x2_def_padding"
+    android:paddingBottom="@dimen/x2_def_padding"
+    android:layout_height="wrap_content">
+
+    <ImageView
+        android:id="@+id/fileView"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:src="@drawable/ic_save"
+        android:adjustViewBounds="false"
+
+        android:transitionName="shared_image"
+        android:contentDescription="@string/image"
+        app:tint="@color/white" />
+
+    <TextView
+        android:id="@+id/file_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="test text"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintLeft_toRightOf="@id/fileView"
+        app:layout_constraintRight_toLeftOf="@id/guideline"
+        app:layout_constraintBottom_toBottomOf="@id/fileView"
+        android:textColor="@color/colorForegroundLight"
+        android:textSize="16sp" />
+
+    <ImageButton
+        android:visibility="visible"
+        app:layout_constraintLeft_toLeftOf="@id/guideline"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        android:id="@+id/view_chat_file_save"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:background="@drawable/circular"
+        android:src="@drawable/ic_download"
+        android:scaleType="centerCrop"
+        android:elevation="@dimen/x2_def_padding"
+        android:padding="@dimen/x2_def_padding"
+        app:tint="@color/white" />
+
+    <ImageButton
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintLeft_toLeftOf="@id/guideline"
+        android:id="@+id/view_chat_file_option"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:background="@drawable/circular"
+        android:src="@drawable/ic_dots"
+        android:scaleType="centerCrop"
+        android:elevation="@dimen/x2_def_padding"
+        android:padding="@dimen/x2_def_padding"
+        app:tint="@color/white" />
+
+
+    <ProgressBar
+        android:visibility="gone"
+        android:elevation="@dimen/x2_def_padding"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintLeft_toLeftOf="@id/guideline"
+        app:layout_constraintRight_toRightOf="parent"
+        android:id="@+id/view_chat_file_progress"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:background="@drawable/circular"
+        android:padding="@dimen/x2_def_padding"
+        android:progressTint="@color/white"
+        android:progress="20" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.8" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

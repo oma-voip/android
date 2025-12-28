@@ -31,6 +31,12 @@ class AttachmentCacheManager(
         return file.exists()
     }
 
+    fun attachmentIsCachedExtra(attachId: String): Boolean {
+        val fileName = attachId
+        val file = File(cacheDir, fileName)
+        return file.exists()
+    }
+
     fun deletePhoto(uri: Uri): Boolean {
         val file = File(URI(uri.path))
         if (!file.exists())
@@ -51,6 +57,23 @@ class AttachmentCacheManager(
 
         val iterator = try {
             downloadFunc(attach.id)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+
+        return saveFileFromChunks(fileName, iterator)
+    }
+
+    suspend fun getFileById(attachId: String): File? {
+        val fileName = attachId
+        val file = File(cacheDir, fileName)
+        if (file.exists()) {
+            return file
+        }
+
+        val iterator = try {
+            downloadFunc(attachId)
         } catch (e: Exception) {
             e.printStackTrace()
             return null

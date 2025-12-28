@@ -1,33 +1,44 @@
 package me.sweettie.oma.ui.chat
 
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.ClipData
 import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.appcompat.widget.LinearLayoutCompat
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityOptionsCompat
-import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.fragment.app.FragmentActivity
+import androidx.media3.common.util.UnstableApi
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.data.MessageList
+import me.sweettie.oma.ui.custom.chatfile.ChatFile
 import me.sweettie.oma.ui.custom.chatimage.ChatImage
+import me.sweettie.oma.ui.custom.chatvideo.ChatVideo
 import me.sweettie.oma.ui.photoview.FullScreenActivity
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.Utils
 import me.sweettie.oma.utils.getById
+import me.sweettie.oma.utils.getMimeType
 import me.sweettie.oma.utils.getOnlyDateFormat
 import me.sweettie.oma.utils.getTimeFormat1
 import me.sweettie.oma.utils.getTimeFormat2
 import me.sweettie.oma.utils.isImage
+import me.sweettie.oma.utils.isVideo
 import proto.OmaOuterClass
 import proto.OmaOuterClass.Message
 
@@ -78,6 +89,7 @@ class MessageListAdapter(
     }
 
 
+    @OptIn(UnstableApi::class)
     private fun putMessage(container: LinearLayoutCompat, messagesGroup: List<Message>) {
         container.removeAllViews()
         val inflater = LayoutInflater.from(container.context)
@@ -94,7 +106,6 @@ class MessageListAdapter(
 
 
             message.attachmentsList.forEach { attach ->
-
                 val attachmentLayout =
                     inflater.inflate(R.layout.stacked_message_attachment, attachmentList, false)
                 if (attach.isImage()) {
@@ -123,25 +134,166 @@ class MessageListAdapter(
                     }
                     attachmentLayout.findViewById<LinearLayout>(R.id.linearLayout)
                         .addView(attachmentImage, 0)
-                } else {
-                    val attachmentImage = ImageView(attachmentLayout.context).apply {
+                } else if (attach.isVideo()) {
+
+                    val attachmentImage = ChatVideo(attachmentLayout.context, attach).apply {
                         layoutParams = LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.MATCH_PARENT
-                        )
-                        transitionName = "shared_image"
-                        adjustViewBounds = false
-                        setImageResource(R.drawable.ic_save)
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
                             LinearLayout.LayoutParams.WRAP_CONTENT
                         )
-                        setColorFilter(
-                            ContextCompat.getColor(
-                                container.context,
-                                android.R.color.white
+                        onPhotoClick = {
+                            val intent =
+                                Intent(fragmentActivity, FullScreenActivity::class.java)
+                            intent.putExtra("videoId", attach.id)
+                            intent.putExtra(
+                                "actionBarName",
+                                fragmentActivity.findViewById<TextView>(R.id.channel_name).text
                             )
+
+                            val options =
+                                ActivityOptionsCompat.makeSceneTransitionAnimation(
+                                    fragmentActivity,
+                                    imageView,
+                                    "shared_image"
+                                )
+                            fragmentActivity.startActivity(intent, options.toBundle())
+                        }
+                        onOptionClicked = {
+                            val popup = PopupMenu(context, it)
+                            popup.menu.add(0, 1, 0, "Save")
+                            popup.menu.add(0, 2, 1, "Save to gallery")
+                            popup.setOnMenuItemClickListener { item ->
+                                when (item.itemId) {
+                                    1 -> {
+                                        if (it.save())
+                                            Toast.makeText(
+                                                this.context,
+                                                "Already saved!",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        true
+                                    }
+
+                                    2 -> {
+                                        it.save()
+                                        println(attach.filename)
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            val isLoaded =
+                                                SessionManager.cacheManager.attachmentIsCachedExtra(
+                                                    attach.id
+                                                )
+                                            if (!isLoaded)
+                                                return@launch
+                                            file =
+                                                SessionManager.cacheManager.getFileById(attach.id)
+                                            Utils.saveVideoToGallery(
+                                                file!!,
+                                                attach.filename,
+                                                context
+                                            )
+                                        }
+                                        Toast.makeText(
+                                            context,
+                                            "Saved to gallery!",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                        true
+                                    }
+
+                                    else -> false
+                                }
+                            }
+                            popup.show()
+                        }
+                    }
+                    attachmentLayout.findViewById<LinearLayout>(R.id.linearLayout)
+                        .addView(attachmentImage, 0)
+                } else {
+                    val attachmentImage = ChatFile(attachmentLayout.context, attach).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
                         )
+                        transitionName = "shared_image"
+                        onOptionClick = {
+                            val popup = PopupMenu(context, it)
+                            popup.menu.add(0, 1, 0, "Save to downloads")
+                            popup.menu.add(0, 2, 1, "Open")
+                            popup.menu.add(0, 3, 2, "Share")
+                            popup.setOnMenuItemClickListener { item ->
+                                when (item.itemId) {
+                                    1 -> {
+                                        val contentUri = FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.fileprovider",
+                                            this.file!!
+                                        )
+                                        val savedUri = Utils.saveUriToDownloads(
+                                            context,
+                                            attach.filename,
+                                            getMimeType(context, contentUri),
+                                            contentUri
+                                        )
+                                        Toast.makeText(
+                                            context,
+                                            "Saved to downloads!",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                        true
+                                    }
+
+                                    2 -> {
+                                        val contentUri = FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.fileprovider",
+                                            this.file!!
+                                        )
+                                        val share = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(
+                                                contentUri,
+                                                getMimeType(context, contentUri)
+                                            )
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        val chooser = Intent.createChooser(share, "Open file")
+                                        chooser.clipData = ClipData.newUri(
+                                            context.contentResolver,
+                                            "file",
+                                            contentUri
+                                        )
+                                        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        if (context !is Activity) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+                                        context.startActivity(chooser)
+                                        true
+                                    }
+
+                                    3 -> {
+                                        val contentUri = FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.fileprovider",
+                                            this.file!!
+                                        )
+
+                                        val share = Intent(Intent.ACTION_SEND).apply {
+                                            type = getMimeType(context, contentUri)
+                                            putExtra(Intent.EXTRA_STREAM, contentUri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(
+                                            Intent.createChooser(
+                                                share,
+                                                "Share file"
+                                            )
+                                        )
+                                        true
+                                    }
+
+                                    else -> false
+                                }
+                            }
+                            popup.show()
+                        }
                     }
                     attachmentLayout.findViewById<LinearLayout>(R.id.linearLayout)
                         .addView(attachmentImage, 0)
@@ -149,8 +301,10 @@ class MessageListAdapter(
                 val attachmentText: TextView = attachmentLayout.findViewById(R.id.tvAttachmentText)
 
                 if (!attach.isImage()) {
-                    attachmentText.text = attach.filename
+                    attachmentText.visibility = View.GONE
                 }
+                if (attachmentText.text.isEmpty())
+                    attachmentText.visibility = View.GONE
                 attachmentList.addView(attachmentLayout)
             }
 

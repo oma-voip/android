@@ -2,11 +2,13 @@ package me.sweettie.oma.utils
 
 import android.content.Context
 import android.content.res.Resources
+import android.net.Uri
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.webkit.MimeTypeMap
 import android.widget.EditText
 import android.widget.TextView
 import androidx.annotation.ColorInt
@@ -15,10 +17,13 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import proto.OmaOuterClass
+import java.io.BufferedInputStream
+import java.net.URLConnection
 import java.nio.ByteBuffer
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -112,6 +117,15 @@ fun OmaOuterClass.Attachment.isImage(): Boolean {
     return imageExtensions.any { ext -> filenameLower.endsWith(".$ext") }
 }
 
+fun OmaOuterClass.Attachment.isVideo(): Boolean {
+    val imageExtensions = setOf(
+        "mp4", "m4v", "mkv", "webm", "mov", "avi", "3gp", "3g2",
+        "flv", "wmv", "mpeg", "mpg", "mts", "m2ts", "ts", "vob", "ogv", "rm", "rmvb"
+    )
+    val filenameLower = this.filename.lowercase()
+    return imageExtensions.any { ext -> filenameLower.endsWith(".$ext") }
+}
+
 fun Int.toPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
 
 fun View.setOposit() {
@@ -141,4 +155,29 @@ fun Context.toPx(dp: Int): Float = TypedValue.applyDimension(
 
 fun Int.toDp(): Int {
     return (this * Resources.getSystem().displayMetrics.density).roundToInt()
+}
+
+fun getMimeType(context: Context, uri: Uri): String {
+    val resolver = context.contentResolver
+
+    resolver.getType(uri)?.let { return it }
+
+    val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())?.lowercase(Locale.US)
+    if (!extension.isNullOrEmpty()) {
+        MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)?.let { return it }
+    }
+
+    try {
+        resolver.openInputStream(uri)?.use { input ->
+            BufferedInputStream(input).use { bis ->
+                bis.mark(1024)
+                val guessed = URLConnection.guessContentTypeFromStream(bis)
+                bis.reset()
+                if (guessed != null) return guessed
+            }
+        }
+    } catch (ignored: Exception) { /* ignore */
+    }
+
+    return "application/octet-stream"
 }
