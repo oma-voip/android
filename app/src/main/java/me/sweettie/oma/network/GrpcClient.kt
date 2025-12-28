@@ -124,6 +124,19 @@ object GrpcClient {
         }
     }
 
+    suspend fun getFileLink(fileId: String): OmaOuterClass.GetFileLinkResponse? {
+        return try {
+            val req = OmaOuterClass.GetFileLinkRequest.newBuilder()
+                .setId(fileId)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.getFileLink(req)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     suspend fun register(
         username: String,
         password: String,

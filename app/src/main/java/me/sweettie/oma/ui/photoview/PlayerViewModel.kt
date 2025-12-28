@@ -11,8 +11,9 @@ import androidx.media3.exoplayer.SimpleExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import me.sweettie.oma.ui.custom.AttachmentDataSourceFactory
+import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.utils.SessionManager
+import me.sweettie.oma.utils.Utils
 import proto.OmaOuterClass
 
 @UnstableApi
@@ -64,12 +65,25 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
         } else {
             viewModelScope.launch(Dispatchers.Main) {
-                val dsFactory =
-                    AttachmentDataSourceFactory(attachId = attachId, downloadFunc = downloadFunc)
-                val mediaItem = MediaItem.fromUri("attachment:$attachId")
-                val mediaSource =
-                    androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dsFactory)
-                        .createMediaSource(mediaItem)
+
+                val videoLink = GrpcClient.getFileLink(attachId)
+                if (videoLink == null) {
+                    return@launch
+                }
+
+                val httpFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
+                    .setUserAgent("OmaAndroid/${Utils.getVersionCode(getApplication())}")
+
+                val dataSourceFactory = DefaultDataSource.Factory(
+                    /* context = */ getApplication(),
+                    httpFactory
+                )
+
+                val mediaItem = MediaItem.fromUri(videoLink.url)
+                val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                    .createMediaSource(mediaItem)
+
+
                 p.setMediaSource(mediaSource)
                 p.prepare()
                 p.seekTo(lastPosition)
