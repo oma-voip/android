@@ -15,7 +15,8 @@ import me.sweettie.oma.R
 import me.sweettie.oma.utils.SessionManager
 import proto.OmaOuterClass.User
 
-class MemberListAdapter() : ListAdapter<User, MemberListAdapter.MessageViewHolder>(DiffCallback()) {
+class MemberListAdapter(val itemClickListener: (User, View) -> Unit) :
+    ListAdapter<User, MemberListAdapter.MessageViewHolder>(DiffCallback()) {
 
     inner class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val memberName: TextView = itemView.findViewById(R.id.tvMemberName)
@@ -57,6 +58,9 @@ class MemberListAdapter() : ListAdapter<User, MemberListAdapter.MessageViewHolde
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val sm = getItem(position) ?: return
         holder.memberName.text = sm.username
+        holder.itemView.setOnClickListener {
+            itemClickListener.invoke(sm, holder.itemView)
+        }
         if (userIsOnline(sm)) {
             val drawables = holder.memberName.compoundDrawablesRelative
             val drawable = drawables[0] ?: return

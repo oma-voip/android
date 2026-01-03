@@ -105,4 +105,14 @@ object SessionManager {
         }
     }
 
+    fun getServerById(serverId: String): Server? {
+        servers.forEach {
+            if (it.space.id.equals(serverId))
+                return it
+            if (it.space.private && it.space.otherUser.equals(serverId))
+                return it
+        }
+        return null
+    }
+
 }

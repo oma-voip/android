@@ -341,6 +341,7 @@ object GrpcClient {
         }
     }
 
+
     suspend fun getVoiceRequest(serverId: String, channelId: String) {
         try {
             val req = OmaOuterClass.RequestVoiceRelayRequest.newBuilder()
@@ -406,6 +407,19 @@ object GrpcClient {
                 stub.createSpace(req)
             }
         } catch (_: Exception) {
+        }
+    }
+
+    suspend fun createPrivateDialog(userId: String): OmaOuterClass.CreateSpaceResponse? {
+        return try {
+            val req = OmaOuterClass.CreatePrivateSpaceRequest.newBuilder()
+                .setOtherUser(userId)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.createPrivateSpace(req)
+            }
+        } catch (_: Exception) {
+            null
         }
     }
 

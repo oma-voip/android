@@ -49,6 +49,7 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         android:padding="@dimen/x3_def_padding"
+        android:visibility="visible"
         android:orientation="vertical">
 
         <com.google.android.material.textfield.TextInputLayout
@@ -67,6 +68,7 @@
                 android:id="@+id/spaceId"
                 android:selectAllOnFocus="true"
                 android:layout_width="match_parent"
+                android:textSize="16sp"
                 android:maxLines="1"
                 android:imeOptions="actionDone"
                 android:layout_height="wrap_content"
@@ -84,10 +86,21 @@
             android:text="@string/join" />
 
         <TextView
+            android:id="@+id/createPrivateDialog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginTop="@dimen/x2_def_padding"
+            android:text="@string/send_direct_message"
+            android:textAlignment="center" />
+
+        <TextView
             android:id="@+id/createPrompt"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:clickable="true"
+            android:layout_marginTop="@dimen/x2_def_padding"
             android:focusable="true"
             android:text="@string/create_space"
             android:textAlignment="center" />
@@ -122,6 +135,8 @@
                 style="@style/Widget.Oma.TextInputLayout"
                 android:id="@+id/spaceName"
                 android:selectAllOnFocus="true"
+                android:textSize="16sp"
+
                 android:layout_width="match_parent"
                 android:maxLines="1"
                 android:imeOptions="actionDone"
@@ -140,10 +155,89 @@
             android:text="@string/create" />
 
         <TextView
+            android:id="@+id/createPrivateDialog2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginTop="@dimen/x2_def_padding"
+            android:text="@string/send_direct_message"
+            android:textAlignment="center" />
+
+        <TextView
             android:id="@+id/joinPrompt"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:clickable="true"
+            android:layout_marginTop="@dimen/x2_def_padding"
+            android:focusable="true"
+            android:text="@string/join_space"
+            android:textAlignment="center" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/openDirectLinear"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:padding="@dimen/x3_def_padding"
+        android:orientation="vertical">
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Oma.TextInputLayout"
+            app:errorEnabled="false"
+            app:hintEnabled="false"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent"
+            android:maxLines="1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:layout_editor_absoluteX="1dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                style="@style/Widget.Oma.TextInputLayout"
+                android:id="@+id/directId"
+                android:textSize="16sp"
+                android:selectAllOnFocus="true"
+                android:layout_width="match_parent"
+                android:maxLines="1"
+                android:imeOptions="actionDone"
+                android:layout_height="wrap_content"
+                android:hint="@string/user_id"
+                android:minHeight="48dp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Button
+            style="@style/Theme.Oma.Input"
+            android:id="@+id/sendBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:enabled="false"
+            android:text="Open Direct Messages" />
+
+        <TextView
+            android:id="@+id/createSpace"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginTop="@dimen/x2_def_padding"
+            android:text="@string/create_space"
+            android:textAlignment="center" />
+
+        <TextView
+            android:id="@+id/joinPrompt2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:layout_marginTop="@dimen/x2_def_padding"
             android:focusable="true"
             android:text="@string/join_space"
             android:textAlignment="center" />

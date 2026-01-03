@@ -17,6 +17,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import me.sweettie.oma.R
+import me.sweettie.oma.data.MessageList
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.call.OmaConnectionService
@@ -116,7 +117,30 @@ class StartUp : AppCompatActivity() {
 
                 }
                 SessionManager.servers = servers
+                SessionManager.servers.forEach { s ->
+                    s.loadAllNecessaryInfo()
+                    s.hashChannels.forEach {
+                        GrpcClient.getMessages(s.space.id, it.value.id, 0, onSuccess = { ml_ ->
+                            // LOAD MESSAGE LIST, CHECK LAST SAVED MESSAGE, IF LAST SAVED MESSAGE ID NOT EQUALS NEW LAST MESSAGE ID - MARK HIM AS UNREAD
+                            val ml = MessageList(s.space.id, it.value.id, ml_)
+                            SessionManager.cachedMessageList[it.value.id] = ml
+                            val lastMessage = ml.messageLis[0]
+                            if (!SecurePrefs.sf!!.getString("last_${s.space.id}_${it.key}", "")
+                                    .equals(lastMessage.id)
+                            ) {
+                                val temp = SessionManager.unreadedMessages.getOrDefault(
+                                    s.space.id,
+                                    arrayListOf()
+                                )
+                                if (!temp.contains(it.value.id)) {
+                                    temp.add(it.value.id)
+                                    SessionManager.unreadedMessages.put(s.space.id, temp)
+                                }
+                            }
 
+                        }, onError = {})
+                    }
+                }
                 keepSplash = false
                 val intent2 = Intent(this@StartUp, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP and Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)

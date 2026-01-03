@@ -21,7 +21,8 @@ import proto.OmaOuterClass.Channel
 
 class ChannelAdapter(
     private var server: Server?,
-    private val onServerClick: (Server, Channel) -> Unit
+    private val onServerClick: (Server, Channel) -> Unit,
+    private val onLongPress: (Server, Channel, View, Int) -> Unit,
 ) : ListAdapter<Channel, ChannelAdapter.ServerViewHolder>(DiffCallback()) {
 
     class DiffCallback : DiffUtil.ItemCallback<Channel>() {
@@ -84,6 +85,7 @@ class ChannelAdapter(
                 onServerClick(server!!, getItem(position))
             }
         }
+        val server = SessionManager.getServerBySpaceId(channel.spaceId)!!
         var isPrivate = false
         if (channel.type.equals(OmaOuterClass.ChannelType.VOICE))
             holder.letter.setStartDrawable(R.drawable.ic_voice_channel, R.color.white)
@@ -105,7 +107,7 @@ class ChannelAdapter(
                 val position = holder.adapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onServerClick(
-                        SessionManager.getServerBySpaceId(channel.spaceId)!!,
+                        server,
                         getItem(position)
                     )
                 }
@@ -121,14 +123,14 @@ class ChannelAdapter(
         holder.itemView.background = null
         val cm = SessionManager.channelMembers.getOrDefault(channel.id, ArrayList())
         holder.memberList.removeAllViews()
-        if (cm.size > 0) {
+        if (cm.isNotEmpty()) {
             val inflater = LayoutInflater.from(holder.memberList.context)
             cm.forEach {
                 val ml = inflater.inflate(R.layout.item_member, holder.memberList, false)
                 val un = ml.findViewById<TextView>(R.id.tvMemberName)
-                if (server!!.members.getById(it.id) != null) {
+                if (server.members.getById(it.id) != null) {
                     un.text =
-                        server!!.members.getById(it.id)!!.username
+                        server.members.getById(it.id)!!.username
                 } else {
                     Utils.getCacheUser(it.id) { loadedUser ->
                         un.post {
@@ -156,6 +158,10 @@ class ChannelAdapter(
             if (SessionManager.unreadedMessages.contains(channel.spaceId)) {
                 holder.badge.visibility = View.VISIBLE
             }
+        }
+        holder.itemView.setOnLongClickListener {
+            onLongPress.invoke(server, channel, holder.itemView, position)
+            true
         }
     }
 

@@ -34,6 +34,13 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/fromHomeToSettings"
+            app:destination="@id/settingsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
 
     </fragment>
 
@@ -88,6 +95,13 @@
             android:name="serverId"
             app:argType="string"
             app:nullable="false" />
+        <action
+            android:id="@+id/memberToChat"
+            app:destination="@id/chatFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
 
     </fragment>
 
@@ -99,9 +113,9 @@
 
     <fragment
         android:id="@+id/voiceChatFragment"
-        tools:layout="@layout/fragment_voice_chat"
         android:name="me.sweettie.oma.ui.voicechat.VoiceChatFragment"
-        android:label="VoiceChatFragment">
+        android:label="VoiceChatFragment"
+        tools:layout="@layout/fragment_voice_chat">
 
         <action
             android:id="@+id/action_voicechat_to_members"
@@ -123,10 +137,15 @@
 
         <argument
             android:name="join"
+            android:defaultValue="false"
             app:argType="boolean"
-            app:nullable="false"
-            android:defaultValue="false" />
+            app:nullable="false" />
 
     </fragment>
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="me.sweettie.oma.ui.settings.SettingsFragment"
+        android:label="fragment_settings"
+        tools:layout="@layout/fragment_settings" />
 
 </navigation>

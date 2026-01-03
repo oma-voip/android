@@ -13,9 +13,14 @@ import me.sweettie.oma.data.Server
 import me.sweettie.oma.databinding.FragmentJoincreatespaceBinding
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.main.MainActivity
-import me.sweettie.oma.utils.clear
 import me.sweettie.oma.utils.getEndText
 import me.sweettie.oma.utils.onTextUpdate
+
+private enum class DoType {
+    JOIN,
+    CREATE,
+    SEND_DIRECT
+}
 
 class JoinCreateSpaceFragment : Fragment() {
 
@@ -37,8 +42,10 @@ class JoinCreateSpaceFragment : Fragment() {
 
     lateinit var joinSpaceLinearLayout: LinearLayout
     lateinit var createSpaceLinearLayout: LinearLayout
+    lateinit var directMessageLinearLayout: LinearLayout
 
-    private var joinBoolean = true
+
+    private var doing: DoType = DoType.JOIN
 
     @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -46,31 +53,23 @@ class JoinCreateSpaceFragment : Fragment() {
 
         joinSpaceLinearLayout = binding.joinSpaceLinear
         createSpaceLinearLayout = binding.createSpaceLinear
+        directMessageLinearLayout = binding.openDirectLinear
 
-        val changeLinear = View.OnClickListener {
-            joinBoolean = !joinBoolean
-            if (joinBoolean) {
-                createSpaceLinearLayout.visibility = View.GONE
-                binding.spaceName.clear()
-                joinSpaceLinearLayout.visibility = View.VISIBLE
-            } else {
-                createSpaceLinearLayout.visibility = View.VISIBLE
-                binding.spaceId.clear()
-                joinSpaceLinearLayout.visibility = View.GONE
-            }
-        }
 
         val checkButton = { s: String ->
             if (s.isEmpty() || s.isBlank()) {
                 binding.joinBtn.isEnabled = false
                 binding.createBtn.isEnabled = false
+                binding.sendBtn.isEnabled = false
             } else {
-                if (joinBoolean)
-                    binding.joinBtn.isEnabled = true
-                else
-                    binding.createBtn.isEnabled = true
+                when (doing) {
+                    DoType.JOIN -> binding.joinBtn.isEnabled = true
+                    DoType.CREATE -> binding.createBtn.isEnabled = true
+                    DoType.SEND_DIRECT -> binding.sendBtn.isEnabled = true
+                }
             }
         }
+
 
         binding.backBtn.setOnClickListener {
             val navController =
@@ -79,30 +78,49 @@ class JoinCreateSpaceFragment : Fragment() {
         }
 
         val createOrJoin = View.OnClickListener {
-            if (joinBoolean) {
-                val spaceId = binding.spaceId.getEndText()
-                lifecycleScope.launch {
-                    GrpcClient.joinSpace(spaceId)
-                    binding.backBtn.performClick()
+            when (doing) {
+                DoType.JOIN -> {
+                    val spaceId = binding.spaceId.getEndText()
+                    lifecycleScope.launch {
+                        GrpcClient.joinSpace(spaceId)
+                        binding.backBtn.performClick()
+                    }
                 }
-            } else {
-                val spaceName = binding.spaceName.getEndText()
-                lifecycleScope.launch {
-                    GrpcClient.createSpace(spaceName)
-                    binding.backBtn.performClick()
+
+                DoType.CREATE -> {
+                    val spaceName = binding.spaceName.getEndText()
+                    lifecycleScope.launch {
+                        GrpcClient.createSpace(spaceName)
+                        binding.backBtn.performClick()
+                    }
+                }
+
+                DoType.SEND_DIRECT -> {
+                    val userId = binding.directId.getEndText()
+                    lifecycleScope.launch {
+                        GrpcClient.createPrivateDialog(userId)
+                        binding.backBtn.performClick()
+                    }
                 }
             }
         }
 
 
 
-        binding.joinPrompt.setOnClickListener(changeLinear)
-        binding.createPrompt.setOnClickListener(changeLinear)
+        binding.joinPrompt.setOnClickListener(makeChangeListener(DoType.JOIN))
+        binding.joinPrompt2.setOnClickListener(makeChangeListener(DoType.JOIN))
+        binding.createPrompt.setOnClickListener(makeChangeListener(DoType.CREATE))
+        binding.createSpace.setOnClickListener(makeChangeListener(DoType.CREATE))
+        binding.createPrivateDialog.setOnClickListener(makeChangeListener(DoType.SEND_DIRECT))
+        binding.createPrivateDialog2.setOnClickListener(makeChangeListener(DoType.SEND_DIRECT))
 
         binding.spaceId.onTextUpdate(checkButton)
         binding.spaceName.onTextUpdate(checkButton)
+        binding.directId.onTextUpdate(checkButton)
 
         binding.joinBtn.setOnClickListener(createOrJoin)
+        binding.createBtn.setOnClickListener(createOrJoin)
+        binding.sendBtn.setOnClickListener(createOrJoin)
 
 
 //        space = SessionManager.getServerBySpaceId(args.serverId)!!
@@ -118,6 +136,39 @@ class JoinCreateSpaceFragment : Fragment() {
 //                (activity as? MainActivity)?.navController ?: return@setOnClickListener
 //            navController.popBackStack()
 //        }
+    }
+
+
+    private fun makeChangeListener(type: DoType): View.OnClickListener {
+        return View.OnClickListener {
+            doing = type
+            when (doing) {
+                DoType.JOIN -> {
+                    createSpaceLinearLayout.visibility = View.GONE
+                    directMessageLinearLayout.visibility = View.GONE
+                    //                binding.spaceName.clear()
+                    joinSpaceLinearLayout.visibility = View.VISIBLE
+                    binding.spaceId.requestFocus()
+                }
+
+                DoType.CREATE -> {
+                    joinSpaceLinearLayout.visibility = View.GONE
+                    directMessageLinearLayout.visibility = View.GONE
+                    //                binding.spaceId.clear()
+                    createSpaceLinearLayout.visibility = View.VISIBLE
+                    binding.spaceName.requestFocus()
+                }
+
+                DoType.SEND_DIRECT -> {
+                    joinSpaceLinearLayout.visibility = View.GONE
+                    createSpaceLinearLayout.visibility = View.GONE
+                    //                binding.spaceId.clear()
+                    directMessageLinearLayout.visibility = View.VISIBLE
+                    binding.directId.requestFocus()
+
+                }
+            }
+        }
     }
 
 }

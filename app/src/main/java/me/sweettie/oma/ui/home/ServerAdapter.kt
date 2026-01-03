@@ -17,7 +17,9 @@ import me.sweettie.oma.utils.toDp
 class ServerAdapter(
     private val onServerClick: (Server) -> Unit,
     private val onPrivateListClick: () -> Unit,
-    private val onAddClick: () -> Unit
+    private val onAddClick: () -> Unit,
+    private val onSettingsClick: () -> Unit,
+    private val onLongServerPress: (Server, View) -> Unit
 ) : ListAdapter<ServerListItem, RecyclerView.ViewHolder>(DiffCallback()) {
 
     open inner class ServerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -36,6 +38,7 @@ class ServerAdapter(
 
     inner class DividerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
     inner class AddButtonViewHolder(itemView: View) : ServerViewHolder(itemView)
+    inner class SettingsButtonViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
     inner class PrivateMessageHolder(itemView: View) : PrivateMessageViewHolder(itemView)
 
     override fun getItemViewType(position: Int): Int {
@@ -44,6 +47,7 @@ class ServerAdapter(
             is ServerListItem.DividerItem -> 1
             is ServerListItem.PrivateMessagesItem -> 3
             is ServerListItem.AddButtonItem -> 2
+            is ServerListItem.SettingsButtonItem -> 4
         }
     }
 
@@ -89,6 +93,7 @@ class ServerAdapter(
         items.addAll(tempItems)
 //        items.add(ServerListItem.DividerItem)
         items.add(ServerListItem.AddButtonItem)
+        items.add(ServerListItem.SettingsButtonItem)
         updateServer(items)
     }
 
@@ -117,11 +122,17 @@ class ServerAdapter(
                 PrivateMessageHolder(view)
             }
 
+            4 -> {
+                val view = inflater.inflate(R.layout.settings_button_server_list, parent, false)
+//                (view.layoutParams as RecyclerView.LayoutParams).setMargins(0, 15.toDp(), 0, 0)
+                SettingsButtonViewHolder(view)
+            }
+
             else -> throw IllegalArgumentException("Unknown viewType $viewType")
         }
     }
 
-    public var selectedSpaceId: String = SessionManager.servers.getFirstNotPrivate().space.id
+    var selectedSpaceId: String = SessionManager.servers.getFirstNotPrivate().space.id
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = getItem(position)) {
@@ -166,6 +177,11 @@ class ServerAdapter(
                 else
                     holder.badge.visibility = View.GONE
 
+
+                serverHolder.itemView.setOnLongClickListener {
+                    onLongServerPress.invoke(item.server, serverHolder.itemView)
+                    true
+                }
 
             }
 
@@ -214,6 +230,13 @@ class ServerAdapter(
                 addHolder.letter.text = "+"
                 addHolder.itemView.setOnClickListener {
                     onAddClick()
+                }
+            }
+
+            is ServerListItem.SettingsButtonItem -> {
+                val addHolder = holder as SettingsButtonViewHolder
+                addHolder.itemView.setOnClickListener {
+                    onSettingsClick.invoke()
                 }
             }
         }

@@ -7,4 +7,5 @@ sealed class ServerListItem {
     object DividerItem : ServerListItem()
     object PrivateMessagesItem : ServerListItem()
     object AddButtonItem : ServerListItem()
+    object SettingsButtonItem : ServerListItem()
 }
