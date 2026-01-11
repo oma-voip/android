@@ -5,19 +5,28 @@ package me.sweettie.oma.ui.main
 import android.Manifest
 import android.R.attr
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.PixelFormat
+import android.net.ConnectivityManager
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
 import android.view.GestureDetector
+import android.view.Gravity
 import android.view.MotionEvent
+import android.view.View
 import android.view.Window
+import android.view.WindowManager
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.GestureDetectorCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.google.android.gms.tasks.OnCompleteListener
@@ -25,15 +34,17 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import me.sweettie.oma.R
+import me.sweettie.oma.data.Server
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.home.HomeFragmentDirections
+import me.sweettie.oma.ui.main.MainViewModel.UiState
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.SessionState
 import proto.OmaOuterClass
 import kotlin.math.abs
-
 
 
 class MainActivity : AppCompatActivity() {
@@ -43,9 +54,14 @@ class MainActivity : AppCompatActivity() {
     private val swipeDistance = 300
     private val swipeVelocity = 100
 
+    private var bannerView: View? = null
+    private var bannerParams: WindowManager.LayoutParams? = null
+
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
+
+        SessionManager.appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -91,6 +107,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContentView(R.layout.activity_main)
+
+        bannerView = findViewById<LinearLayout>(R.id.topBannerRoot)
 
 
         FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
@@ -150,12 +168,93 @@ class MainActivity : AppCompatActivity() {
 
         })
 
+        handleIncomingIntent(intent)
+
+
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val req = NetworkRequest.Builder()
+            .addTransportType(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)
+            .build()
+        cm.requestNetwork(req, SessionManager.networkCallback)
+
+
+        lifecycleScope.launch {
+            SessionManager.viewModel.uiState.collect { state ->
+                when (state) {
+                    is UiState.UpdateNow -> {
+                        updateLogic()
+                    }
+
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    fun updateLogic() {
+        showTopBanner(false, {
+            lifecycleScope.launch {
+                println("TRY TO UPDATE....")
+                val t = GrpcClient.getServers()
+                if (t == null) {
+                    return@launch
+                }
+                val servers = arrayListOf<Server>()
+                println("Init servers: ${t.spacesList.size}")
+                t.spacesList.forEach {
+                    println("STARTUP: prepear server with id ${it.id}")
+                    servers.add(Server(it))
+                }
+                SessionManager.servers = servers
+                servers.forEach {
+                    it.loadAllNecessaryInfo()
+                    println("SELECTED: ${SessionManager.selectedServer!!.space.name} ${SessionManager.selectedChannel}")
+                    if (SessionManager.selectedChannel != null && it.space.id == SessionManager.selectedServer!!.space.id) {
+                        val oldCopy =
+                            SessionManager.cachedMessageList[SessionManager.selectedChannel!!]!!.message_.messagesList
+                        GrpcClient.getMessages(
+                            SessionManager.selectedServer!!.space.id,
+                            SessionManager.selectedChannel!!,
+                            0,
+                            onSuccess = {
+                                val newCopy: ArrayList<OmaOuterClass.Message> =
+                                    ArrayList(it.messagesList)
+                                for (m in it.messagesList) {
+                                    if (oldCopy.contains(m))
+                                        newCopy.remove(m)
+                                }
+                                println("NEW COPY: ${newCopy.size}")
+                                for (m in newCopy) {
+                                    val e = OmaOuterClass.Event.newBuilder().setMessageReceived(
+                                        OmaOuterClass.MessageReceived.newBuilder()
+                                            .setChannelId(SessionManager.selectedChannel!!)
+                                            .setSpaceId(SessionManager.selectedServer!!.space.id)
+                                            .setMessage(m)
+                                    )
+                                        .build()
+                                    SessionManager.viewModel.handleEvent(e)
+                                }
+
+                            },
+                            onError = {
+                                println("SOME ERROR WHILE GETTING CHAT MESSAGES")
+                                it.printStackTrace()
+                            })
+                    }
+                }
+                hideTopBanner()
+
+            }
+        })
+    }
+    private fun handleIncomingIntent(intent: Intent) {
         if (intent.action != null) {
             if (intent.action == "START_ACTIVITY") {
                 val spaceId = intent.getStringExtra("spaceID")
                 val channelId = intent.getStringExtra("channelID")
                 val s = SessionManager.getServerBySpaceId(spaceId!!) ?: return
                 val c = s.hashChannels[channelId!!] ?: return
+                SessionManager.selectedServer = s
                 val action = if (c.type.equals(OmaOuterClass.ChannelType.TEXT)) {
                     HomeFragmentDirections.actionHomeToChat(
                         channelId = c.id,
@@ -168,8 +267,40 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
                 navController.navigate(action)
+
+
+            } else if (intent.action == "ACTION_OPEN_VOICE_CHAT") {
+                val spaceId = intent.getStringExtra("spaceID")
+                val channelId = intent.getStringExtra("channelID")
+                println("OPEN VOICE CHAT WITH spaceId=$spaceId; channelID=$channelId")
+                val s = SessionManager.getServerBySpaceId(spaceId!!) ?: return
+                val c = s.hashChannels[channelId!!]
+                if (c == null) {
+                    println("Hash null, loading and re run action...")
+                    lifecycleScope.launch {
+                        s.loadAllNecessaryInfo()
+                        handleIncomingIntent(intent)
+                    }
+                    return
+                }
+                println("Loading new view")
+                SessionManager.selectedServer = s
+                val action = HomeFragmentDirections.actionHomeToVoicechat(
+                    channelId = c.id,
+                    serverId = s.space.id,
+                    join = true
+                )
+
+                navController.navigate(action)
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent != null)
+            handleIncomingIntent(intent)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -194,5 +325,69 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
+    fun showTopBanner(
+        touchable: Boolean = true,
+        onUpdate: (() -> Unit)? = null
+    ) {
+        runOnUiThread {
+            if (bannerView!!.visibility != View.GONE) return@runOnUiThread // уже показан
+
+
+//            tv.text = message
+
+            if (onUpdate != null) {
+                onUpdate()
+            }
+
+            val lp = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_PANEL,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        or if (!touchable) WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE else 0,
+                PixelFormat.TRANSLUCENT
+            )
+            lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            lp.x = 0
+            lp.y = 0
+
+            try {
+                bannerParams = lp
+                bannerView!!.visibility = View.VISIBLE
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun hideTopBanner() {
+        runOnUiThread {
+            bannerView?.let {
+                try {
+                    bannerView!!.visibility = View.GONE
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    bannerParams = null
+                }
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        hideTopBanner()
+        super.onDestroy()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val lastPing = SessionManager.lastPingTime
+        val now = System.currentTimeMillis()
+        if (lastPing - now > 11 * 1000) {
+            updateLogic()
+        }
+        SessionManager.lastPingTime = System.currentTimeMillis()
+    }
 
 }

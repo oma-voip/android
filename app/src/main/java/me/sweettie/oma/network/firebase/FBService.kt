@@ -1,9 +1,16 @@
 package me.sweettie.oma.network.firebase
 
+import android.Manifest
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.telecom.PhoneAccountHandle
+import android.telecom.TelecomManager
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -13,6 +20,8 @@ import kotlinx.coroutines.launch
 import me.sweettie.oma.R
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.StartUp
+import me.sweettie.oma.ui.call.OmaConnectionService
+import me.sweettie.oma.utils.SecurePrefs
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.SessionState
 
@@ -37,12 +46,55 @@ class FBService : FirebaseMessagingService() {
 //            text += "$t -> $u | "
 //        }
         if (message.notification == null) {
-            if (message.data.getOrDefault("type", "").equals("message_received"))
+            if (message.data.get("type").equals("incoming_call"))
+                openCallView(this, message)
+            else if (message.data.getOrDefault("type", "").equals("message_received"))
                 showNotification(this, message)
+
         }
     }
 
     companion object {
+
+        fun openCallView(context: Context, message: RemoteMessage) {
+            if (SecurePrefs.sf == null)
+                SecurePrefs.init(context)
+
+            val userName = message.data.get("user")
+            val channelID = message.data.get("channelID")
+            val spaceID = message.data.get("spaceID")
+
+
+            val isAppForgeground = SessionManager.currentState == SessionState.NULL
+            if (!isAppForgeground && SessionManager.selectedChannel == channelID) {
+                println("Block open CallUI, because its self calling")
+                return
+            }
+
+
+            val telecomManager = context.getSystemService(TELECOM_SERVICE) as TelecomManager
+            val componentName = ComponentName(context, OmaConnectionService::class.java)
+            val phoneAccountHandle = PhoneAccountHandle(componentName, "oma_app_id")
+
+            val extras = Bundle().apply {
+                putString("user", userName)
+                putString("channelID", channelID)
+                putString("spaceID", spaceID)
+                putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, phoneAccountHandle)
+            }
+
+            try {
+                if (ActivityCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.MANAGE_OWN_CALLS
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    telecomManager.addNewIncomingCall(phoneAccountHandle, extras)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
         fun showNotification(context: Context, message: RemoteMessage) {
 
             val isAppForgeground = SessionManager.currentState == SessionState.NULL

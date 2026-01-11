@@ -32,10 +32,17 @@ class MainViewModel : ViewModel() {
             .launchIn(viewModelScope) // ← запускает корутину, отменяет при onCleared()
     }
 
-
-    private fun handleEvent(event: OmaOuterClass.Event) {
+    fun handleEvent(event: OmaOuterClass.Event) {
         println("New Event: ${event.eventCase}")
         when (event.eventCase) {
+            OmaOuterClass.Event.EventCase.KEEPALIVE -> {
+                val lastPing = SessionManager.lastPingTime
+                val now = System.currentTimeMillis()
+                if (lastPing - now > 11 * 1000) {
+                    _uiState.value = UiState.UpdateNow(0)
+                }
+                SessionManager.lastPingTime = System.currentTimeMillis()
+            }
 
             OmaOuterClass.Event.EventCase.VOICERELAYREADY -> {
                 println("+ VOICE_RELEY_READY | Space = ${event.voiceRelayReady.spaceId} | Peer id = ${event.voiceRelayReady.channelId} | Addr. = ${event.voiceRelayReady.address} | Key = ${event.voiceRelayReady.key}")
@@ -202,6 +209,7 @@ class MainViewModel : ViewModel() {
         data class StreamStarted(val userID: String) : UiState()
         data class StreamEnded(val userID: String) : UiState()
         data class ThumbNail(val thumbnail: OmaOuterClass.Thumbnail) : UiState()
+        data class UpdateNow(val last: Int) : UiState()
     }
 
 

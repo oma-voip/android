@@ -20,7 +20,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import eu.buney.kopus.OpusDecoder
 import eu.buney.kopus.decode
-import eu.buney.kopus.encode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,6 +32,7 @@ import me.sweettie.oma.network.udp.Key
 import me.sweettie.oma.network.udp.Packet
 import me.sweettie.oma.network.udp.UdpClient
 import me.sweettie.oma.network.udp.UdpHeaders
+import me.sweettie.oma.network.whip.ScreenCaptureService
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.utils.HexToByteArray
 import me.sweettie.oma.utils.SessionManager
@@ -72,10 +72,11 @@ class VoipForegroundService : Service() {
                 if (it.value.isNotEmpty())
                     buffers.add(it.value.removeAt(0))
                 else {
-                    decoders[it.key]?.decode(empt[0], 960)
+                    buffers.add(ShortArray(FRAME_SIZE).apply { fill(0) })
+//                    decoders[it.key]?.decode(empt[0], 960)
                 }
             }
-            if (buffers.isEmpty()) return ShortArray(960).apply { fill(0) }
+            if (buffers.isEmpty()) return ShortArray(FRAME_SIZE).apply { fill(0) }
             val output = ShortArray(FRAME_SIZE)
             output.fill(0)
 
@@ -91,6 +92,7 @@ class VoipForegroundService : Service() {
                         }
                     }
                 } catch (_: Exception) {
+                    return ShortArray(FRAME_SIZE).apply { fill(0) }
                 }
             }
             return output
@@ -211,6 +213,8 @@ class VoipForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
+
+
                 startForeground(NOTIF_ID, buildNotification("Starting VoIP relay..."))
                 AudioFragmentManager.clear()
 
@@ -238,12 +242,21 @@ class VoipForegroundService : Service() {
                         udpClient?.send(encrypted)
                         udpClient?.stop()
                     }
+
+                    val stopIntent =
+                        Intent(this, ScreenCaptureService::class.java).apply {
+                            action = ScreenCaptureService.ACTION_STOP
+                        }
+                    startService(stopIntent)
+
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
                 stopForeground(true)
                 stopProximityMonitoring()
                 stopSelf()
+
+
             }
 
             ACTION_CHANGE_OUTPUT -> {
@@ -256,13 +269,14 @@ class VoipForegroundService : Service() {
         return START_STICKY
     }
 
+
     private fun startUdp(addressWithPort: String) {
         val (host, port) = UdpClient.parseAddress(addressWithPort)
 
         udpClient?.stop()
         udpClient = UdpClient(host, port)
-
-        udpClient?.startListening { data, len ->
+        println("host: $host; port: $port")
+        udpClient!!.currentOnReceiveCallback = { data, len ->
             serviceScope.launch {
                 try {
                     val decrypted = try {
@@ -312,6 +326,8 @@ class VoipForegroundService : Service() {
                                 return@launch
                             }
                             val (senderId, opusPayload) = parsed
+                            val decoder =
+                                audioManager!!.getOrCreateDecoder(senderId!!) ?: return@launch
                             if (opusPayload.isEmpty()) {
                                 println("Dropped empty opus payload from $senderId")
                                 return@launch
@@ -320,16 +336,13 @@ class VoipForegroundService : Service() {
                                 println("Suspicious large opus payload: ${opusPayload.size}")
                                 return@launch
                             }
-                            val decoder =
-                                audioManager!!.getOrCreateDecoder(senderId!!) ?: return@launch
                             val pcm = decoder.decode(
                                 opusPayload,
                                 audioManager!!.frameSize
                             )
-                            val f = AudioFragmentManager.addAudio(senderId, pcm, decoder)
-                            if (f) {
+                            if (AudioFragmentManager.audios.isEmpty()) {
                                 val encoded = try {
-                                    audioManager!!.opusEncoder?.encode(ShortArray(960).apply {
+                                    audioManager!!.encodeSync(ShortArray(audioManager!!.frameSize).apply {
                                         fill(
                                             0
                                         )
@@ -340,6 +353,8 @@ class VoipForegroundService : Service() {
                                 }
                                 AudioFragmentManager.setSilence(encoded)
                             }
+                            AudioFragmentManager.addAudio(senderId, pcm, decoder)
+
                         }
 
                         else -> {
@@ -357,6 +372,22 @@ class VoipForegroundService : Service() {
                 }
             }
         }
+
+
+//        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+//        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+//            override fun onAvailable(network: Network) {
+//                if(udpClient!!.isInit)
+//                    startUdp(addressWithPort)
+//            }
+//            override fun onLost(network: Network) {
+////                udpClient?.onNetworkLost(network)
+//            }
+//        }
+//        cm.registerDefaultNetworkCallback(networkCallback)
+
+
+        udpClient?.startListening(udpClient!!.currentOnReceiveCallback)
 
         serviceScope.launch {
             delay(150)
@@ -498,7 +529,7 @@ class VoipForegroundService : Service() {
 
     private suspend fun processAndSendAudio(buffer: ShortArray) {
         val encoded = try {
-            audioManager!!.opusEncoder?.encode(buffer) ?: return
+            audioManager!!.encodeSync(buffer) ?: return
         } catch (e: Exception) {
             e.printStackTrace()
             return

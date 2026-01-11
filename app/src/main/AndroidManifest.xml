@@ -16,8 +16,20 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission
+        android:name="android.permission.CAPTURE_AUDIO_OUTPUT"
+        tools:ignore="ProtectedPermissions" />
+
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
 
     <application
         android:allowBackup="true"
@@ -31,6 +43,30 @@
         android:theme="@style/Theme.Oma"
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="36">
+        <receiver
+            android:name=".ui.call.CallActionReceiver"
+            android:exported="false" />
+        <service
+            android:name=".ui.call.OmaConnectionService"
+            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.telecom.ConnectionService" />
+            </intent-filter>
+
+        </service>
+
+        <activity
+            android:name=".ui.call.IncomingCallActivity"
+            android:exported="true" />
+
+        <service
+            android:name=".network.whip.ScreenCaptureService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection|camera"
+            android:allowAudioPlaybackCapture="true"
+            tools:ignore="ForegroundServicePermission" />
         <activity
             android:name=".ui.webrtc.WebRtcPlayerActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"

@@ -33,6 +33,7 @@ import me.sweettie.oma.ui.main.MainViewModel
 import me.sweettie.oma.ui.progress.ProgressDialogFragment
 import me.sweettie.oma.ui.utils.AttachmentBottomSheetFragment
 import me.sweettie.oma.utils.AttachmentStorage
+import me.sweettie.oma.utils.SecurePrefs
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.Utils
 import me.sweettie.oma.utils.clear
@@ -137,7 +138,7 @@ class ChatFragment : Fragment() {
         }
 
         SessionManager.selectedChannel = args.channelId
-        val r = SessionManager.unreadedMessages.get(SessionManager.selectedServer!!.space.id)
+        val r = SessionManager.unreadedMessages[SessionManager.selectedServer?.space?.id]
         if (r != null) {
             r.remove(args.channelId)
             if (r.isEmpty())
@@ -168,6 +169,9 @@ class ChatFragment : Fragment() {
     private var updateChat = false
 
     private fun onLoadMessage() {
+        if (ml.messageLis.isNotEmpty())
+            SecurePrefs.save("last_${args.serverId}_${args.channelId}", ml.messageLis[0].id)
+
         val layoutManager = LinearLayoutManager(context)
         layoutManager.stackFromEnd = true
         layoutManager.reverseLayout = false

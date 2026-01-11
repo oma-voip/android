@@ -18,12 +18,16 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.provider.MediaStore.Images
+import android.webkit.MimeTypeMap
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
+import androidx.core.net.toUri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,6 +37,7 @@ import me.sweettie.oma.network.GrpcClient
 import proto.OmaOuterClass
 import java.io.BufferedReader
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.FileWriter
 import java.io.IOException
@@ -127,7 +132,7 @@ object Utils {
         val content = attach.content
         val width: Int
         val height: Int
-
+        println(content.size())
         if (content.size() == 0) {
             width = 200
             height = 100
@@ -195,6 +200,17 @@ object Utils {
         }
     }
 
+
+    fun isVideoByMime(context: Context, uri: Uri): Boolean {
+        val cr = context.contentResolver
+        var type = cr.getType(uri)
+        if (type == null) {
+            val ext = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
+            type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
+        }
+        return type?.startsWith("video/") == true
+    }
+
     fun savePhotoIntoGallery(path: String, context: Context) {
         val values = ContentValues()
         values.put(Images.Media.DATE_TAKEN, System.currentTimeMillis())
@@ -202,6 +218,125 @@ object Utils {
         values.put(MediaStore.MediaColumns.DATA, path)
         context.contentResolver.insert(Images.Media.EXTERNAL_CONTENT_URI, values)
     }
+
+    fun saveUriToDownloads(context: Context, fileName: String, mime: String, sourceUri: Uri): Uri? {
+        val resolver = context.contentResolver
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, mime)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Oma")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+            val targetUri =
+                resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return null
+
+            try {
+                resolver.openOutputStream(targetUri)?.use { out ->
+                    resolver.openInputStream(sourceUri)?.use { input ->
+                        val buffer = ByteArray(8 * 1024)
+                        var read: Int
+                        while (input.read(buffer).also { read = it } != -1) {
+                            out.write(buffer, 0, read)
+                        }
+                        out.flush()
+                    }
+                }
+                values.clear()
+                values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                resolver.update(targetUri, values, null, null)
+                targetUri
+            } catch (e: Exception) {
+                resolver.delete(targetUri, null, null)
+                e.printStackTrace()
+                null
+            }
+        } else {
+            try {
+                val downloads =
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val folder = File(downloads, "Oma")
+                if (!folder.exists()) folder.mkdirs()
+                val outFile = File(folder, fileName)
+                resolver.openInputStream(sourceUri)?.use { input ->
+                    FileOutputStream(outFile).use { fos ->
+                        val buffer = ByteArray(8 * 1024)
+                        var read: Int
+                        while (input.read(buffer).also { read = it } != -1) {
+                            fos.write(buffer, 0, read)
+                        }
+                        fos.flush()
+                    }
+                }
+                outFile.toUri()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    suspend fun saveVideoToGallery(videoFile: File, filename: String, context: Context): Boolean {
+        try {
+
+            val filename = filename
+            val mimeType = "video/mp4"
+
+            val values = ContentValues().apply {
+                put(MediaStore.Video.Media.DISPLAY_NAME, filename)
+                put(MediaStore.Video.Media.MIME_TYPE, mimeType)
+                put(MediaStore.Video.Media.TITLE, filename)
+                put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_DCIM + "/Oma/Video")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(MediaStore.Video.Media.IS_PENDING, 1)
+                }
+            }
+
+            val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            } else {
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            }
+
+            val uriSavedVideo = context.contentResolver.insert(collection, values) ?: return false
+            val pfd: ParcelFileDescriptor =
+                context.contentResolver.openFileDescriptor(uriSavedVideo, "w")!!
+            val out = FileOutputStream(pfd.fileDescriptor)
+
+
+            val inf = FileInputStream(videoFile);
+            val buf = ByteArray(8192)
+            var len: Int
+            while ((inf.read(buf).also { len = it }) > 0) {
+                out.write(buf, 0, len)
+            }
+            out.close()
+            inf.close()
+            pfd.close()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                values.clear()
+                values.put(MediaStore.Video.Media.IS_PENDING, 0)
+                context.contentResolver.update(uriSavedVideo, values, null, null)
+            } else {
+                context.sendBroadcast(
+                    Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE).apply {
+                        data = uriSavedVideo
+                    }
+                )
+            }
+
+//            inputStream.close()
+
+            return true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+
+        }
+    }
+
 
     fun saveImageToGallery(uri: Uri, context: Context): Boolean {
         try {
@@ -418,6 +553,23 @@ object Utils {
     ): String {
         val base = URI(relay)
         val segments = listOf(spaceID, channelID, userID, streamID, "whep")
+        val path = joinPaths(base.path ?: "", segments)
+        val userParam =
+            URLEncoder.encode(SessionManager.currentUser!!.id, StandardCharsets.UTF_8.name())
+        val newUri = URI(base.scheme, base.authority, path, "user=$userParam", null)
+
+        return newUri.toString()
+    }
+
+    fun makeWriteURL(
+        relay: String,
+        spaceID: String,
+        channelID: String,
+        userID: String,
+        streamID: String
+    ): String {
+        val base = URI(relay)
+        val segments = listOf(spaceID, channelID, userID, streamID, "whip")
         val path = joinPaths(base.path ?: "", segments)
         val userParam =
             URLEncoder.encode(SessionManager.currentUser!!.id, StandardCharsets.UTF_8.name())

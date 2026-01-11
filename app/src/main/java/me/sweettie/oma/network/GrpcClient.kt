@@ -124,6 +124,19 @@ object GrpcClient {
         }
     }
 
+    suspend fun getFileLink(fileId: String): OmaOuterClass.GetFileLinkResponse? {
+        return try {
+            val req = OmaOuterClass.GetFileLinkRequest.newBuilder()
+                .setId(fileId)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.getFileLink(req)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     suspend fun register(
         username: String,
         password: String,
@@ -328,6 +341,7 @@ object GrpcClient {
         }
     }
 
+
     suspend fun getVoiceRequest(serverId: String, channelId: String) {
         try {
             val req = OmaOuterClass.RequestVoiceRelayRequest.newBuilder()
@@ -396,6 +410,19 @@ object GrpcClient {
         }
     }
 
+    suspend fun createPrivateDialog(userId: String): OmaOuterClass.CreateSpaceResponse? {
+        return try {
+            val req = OmaOuterClass.CreatePrivateSpaceRequest.newBuilder()
+                .setOtherUser(userId)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.createPrivateSpace(req)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     suspend fun setMuted(serverId: String, channelId: String, muted: Boolean) {
         try {
             val req = OmaOuterClass.UpdateMutedStateRequest.newBuilder()
@@ -410,5 +437,21 @@ object GrpcClient {
         }
     }
 
+    suspend fun getVideoRelay(
+        spaceId: String,
+        channelId: String
+    ): OmaOuterClass.GetVideoRelayResponse? {
+        return try {
+            val req = OmaOuterClass.GetVideoRelayRequest.newBuilder()
+                .setSpaceId(spaceId)
+                .setChannelId(channelId)
+                .build()
+            withContext(Dispatchers.IO) {
+                stub.getVideoRelay(req)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
 
 }

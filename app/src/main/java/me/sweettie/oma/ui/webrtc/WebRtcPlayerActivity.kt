@@ -74,5 +74,16 @@ class WebRtcPlayerActivity : AppCompatActivity() {
         SessionManager.isWatchStream = false
     }
 
+    override fun onResume() {
+        super.onResume()
+        SessionManager.isWatchStream = true
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        webView.destroy()
+        SessionManager.isWatchStream = false
+    }
+
 
 }

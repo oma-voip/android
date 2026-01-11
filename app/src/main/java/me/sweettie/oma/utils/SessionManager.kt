@@ -1,9 +1,15 @@
 package me.sweettie.oma.utils
 
+import android.net.ConnectivityManager
+import android.net.Network
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import me.sweettie.oma.data.MessageList
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.data.Streamer
 import me.sweettie.oma.data.Thumb
+import me.sweettie.oma.network.udp.IInternetReconnect
 import me.sweettie.oma.ui.main.MainViewModel
 import me.sweettie.oma.updater.VersionInfo
 import proto.OmaOuterClass
@@ -19,7 +25,22 @@ enum class SessionState {
 
 object SessionManager {
 
+    var iInternetReconnect: IInternetReconnect? = null
+    var networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            iInternetReconnect?.reconnect(network)
+//            udpClient?.onNetworkAvailable(network)
+        }
+
+        override fun onLost(network: Network) {
+        }
+    }
+
+    var lastPingTime: Long = System.currentTimeMillis()
     lateinit var viewModel: MainViewModel
+    lateinit var appScope: CoroutineScope
+    private val _isForgeground = MutableStateFlow(false)
+    val isForgeground = _isForgeground.asStateFlow()
     var isWatchStream = false
     val unreadedMessages: HashMap<String, ArrayList<String>> = HashMap()
     val mutedStates: HashMap<String, Boolean> = HashMap()
@@ -82,6 +103,16 @@ object SessionManager {
         if (selectedServer != null && selectedServer == t) {
             selectedServer = r
         }
+    }
+
+    fun getServerById(serverId: String): Server? {
+        servers.forEach {
+            if (it.space.id.equals(serverId))
+                return it
+            if (it.space.private && it.space.otherUser.equals(serverId))
+                return it
+        }
+        return null
     }
 
 }

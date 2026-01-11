@@ -4,17 +4,20 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavDirections
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import me.sweettie.oma.data.MessageList
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.databinding.FragmentHomeBinding
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.main.MainViewModel
+import me.sweettie.oma.utils.SecurePrefs
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.Utils
 import proto.OmaOuterClass
@@ -23,9 +26,6 @@ class HomeFragment : Fragment() {
     private var job: Job? = null
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
-
-
-
 
 
     override fun onCreateView(
@@ -72,50 +72,111 @@ class HomeFragment : Fragment() {
 
 
         binding.serverChannels.layoutManager = LinearLayoutManager(requireContext())
-        binding.serverChannels.adapter = ChannelAdapter(null) { s, c ->
-            val navController =
-                (activity as? MainActivity)?.navController ?: return@ChannelAdapter
-            var action: NavDirections
-            if (s.space.private) {
-                binding.channelMenu.visibility = View.VISIBLE
-                lifecycleScope.launch {
-                    if (SessionManager.selectedServer == null) {
-                        s.loadAllNecessaryInfo()
-                        SessionManager.selectedServer = s
-                    } else if (SessionManager.selectedServer!!.space.id != s.space.id) {
-                        s.loadAllNecessaryInfo()
-                        SessionManager.selectedChannel = null
-                        SessionManager.selectedServer = s
+        binding.serverChannels.adapter = ChannelAdapter(
+            null, { s, c ->
+                val navController =
+                    (activity as? MainActivity)?.navController ?: return@ChannelAdapter
+                var action: NavDirections
+                if (s.space.private) {
+                    binding.channelMenu.visibility = View.VISIBLE
+                    lifecycleScope.launch {
+                        if (SessionManager.selectedServer == null) {
+                            s.loadAllNecessaryInfo()
+                            SessionManager.selectedServer = s
+                        } else if (SessionManager.selectedServer!!.space.id != s.space.id) {
+                            s.loadAllNecessaryInfo()
+                            SessionManager.selectedChannel = null
+                            SessionManager.selectedServer = s
+
+                        }
+                        s.members.forEach {
+                            SessionManager.updateOnlineInfo(it.id, it.online)
+                        }
+                        action =
+                            HomeFragmentDirections.actionHomeToChat(
+                                channelId = s.channels.first().id,
+                                serverId = s.space.id
+                            )
+                        navController.navigate(action)
 
                     }
-                    s.members.forEach {
-                        SessionManager.updateOnlineInfo(it.id, it.online)
-                    }
-                    action =
+                } else {
+                    println("выбран канал: ${c.name}")
+                    action = if (c.type.equals(OmaOuterClass.ChannelType.TEXT)) {
                         HomeFragmentDirections.actionHomeToChat(
-                            channelId = s.channels.first().id,
+                            channelId = c.id,
                             serverId = s.space.id
                         )
+                    } else {
+                        HomeFragmentDirections.actionHomeToVoicechat(
+                            channelId = c.id,
+                            serverId = s.space.id
+                        )
+                    }
                     navController.navigate(action)
 
                 }
-            } else {
-                println("выбран канал: ${c.name}")
-                action = if (c.type.equals(OmaOuterClass.ChannelType.TEXT)) {
-                    HomeFragmentDirections.actionHomeToChat(
-                        channelId = c.id,
-                        serverId = s.space.id
-                    )
-                } else {
-                    HomeFragmentDirections.actionHomeToVoicechat(
-                        channelId = c.id,
-                        serverId = s.space.id
-                    )
-                }
-                navController.navigate(action)
+            },
+            { server, channel, holder, position ->
+                val popup = PopupMenu(holder.context, holder)
+                val isPrivate = channel.type.equals(OmaOuterClass.ChannelType.UNSPECIFIED)
+                popup.menu.add(0, 1, 0, "Mark as read")
+                popup.setOnMenuItemClickListener { item2 ->
+                    when (item2.itemId) {
+                        1 -> {
 
+                            var ml: MessageList?
+                            if (!isPrivate) {
+                                ml = SessionManager.cachedMessageList[channel.id]!!
+                                val r =
+                                    SessionManager.unreadedMessages.getOrDefault(
+                                        channel.spaceId,
+                                        null
+                                    )
+                                if (r != null) {
+                                    r.remove(channel.id)
+                                    if (r.isEmpty())
+                                        SessionManager.unreadedMessages.remove(channel.spaceId)
+                                    else
+                                        SessionManager.unreadedMessages[channel.spaceId] = r
+
+                                }
+                                if (ml.messageLis.isNotEmpty())
+                                    SecurePrefs.save(
+                                        "last_${server.space.id}_${channel.id}",
+                                        ml.messageLis[0].id
+                                    )
+                            } else {
+                                ml = SessionManager.cachedMessageList[server.channels.first().id]!!
+                                SessionManager.unreadedMessages.remove(channel.spaceId)
+                                if (ml.messageLis.isNotEmpty())
+                                    SecurePrefs.save(
+                                        "last_${server.space.id}_${server.channels.first().id}",
+                                        ml.messageLis[0].id
+                                    )
+                            }
+
+                            (binding.serverChannels.adapter as ChannelAdapter).notifyItemChanged(
+                                position
+                            )
+
+                            if (server.space.private)
+                                (binding.rvServers.adapter as ServerAdapter).notifyItemChanged(0)
+                            else {
+                                (binding.rvServers.adapter as ServerAdapter).notifyItemChanged(
+                                    server
+                                )
+                            }
+
+                            true
+                        }
+
+                        else -> false
+                    }
+                }
+                popup.show()
             }
-        }
+        )
 
 
         val privateCallback = {
@@ -127,11 +188,48 @@ class HomeFragment : Fragment() {
         }
         binding.rvServers.adapter = ServerAdapter(
             serverClickCallback,
-            onPrivateListClick = privateCallback, onAddClick = {
+            onPrivateListClick = privateCallback,
+            onAddClick = {
                 val navController =
                     (activity as? MainActivity)?.navController ?: return@ServerAdapter
                 val action = HomeFragmentDirections.actionMainToJoincreateSpace()
                 navController.navigate(action)
+            },
+            onSettingsClick = {
+                val navController =
+                    (activity as? MainActivity)?.navController ?: return@ServerAdapter
+                val action = HomeFragmentDirections.fromHomeToSettings()
+                navController.navigate(action)
+            },
+            onLongServerPress = { server, view ->
+                val popup = PopupMenu(view.context, view)
+                popup.menu.add(0, 1, 0, "Mark all as read")
+                popup.setOnMenuItemClickListener { item2 ->
+                    when (item2.itemId) {
+                        1 -> {
+                            SessionManager.unreadedMessages.remove(server.space.id)
+                            (binding.rvServers.adapter as ServerAdapter).notifyItemChanged(server)
+                            server.channels.forEachIndexed { index, channel ->
+                                val ml =
+                                    SessionManager.cachedMessageList.getOrDefault(channel.id, null)
+                                if (ml != null)
+                                    if (ml.messageLis.isNotEmpty()) {
+                                        SecurePrefs.save(
+                                            "last_${server.space.id}_${channel.id}",
+                                            ml.messageLis[0].id
+                                        )
+                                        (binding.serverChannels.adapter as ChannelAdapter).notifyItemChanged(
+                                            index
+                                        )
+                                    }
+                            }
+                            true
+                        }
+
+                        else -> false
+                    }
+                }
+                popup.show()
             })
 
         (binding.rvServers.adapter as ServerAdapter).prepareItems(SessionManager.servers)
@@ -188,6 +286,7 @@ class HomeFragment : Fragment() {
                                 state.message.spaceId
                             )
                     }
+
                     is MainViewModel.UiState.ServerJoined -> {
                         if (SessionManager.getServerBySpaceId(state.spaceId) == null) {
                             val r = GrpcClient.getSpace(state.spaceId) ?: return@collect

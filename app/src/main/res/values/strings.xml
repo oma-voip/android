@@ -47,4 +47,14 @@
     <string name="delete">Delete</string>
     <string name="recent_files">Recent files</string>
     <string name="change_output">change output</string>
+    <string name="screen_record">screen record</string>
+    <string name="accept_call">accept call</string>
+    <string name="accept">call</string>
+    <string name="decline">decline</string>
+    <string name="incoming_call">Incoming call…</string>
+    <string name="fetching_update">Fetching update…</string>
+    <string name="send_direct_message"><u>Send Direct Message</u></string>
+    <string name="user_id">User ID</string>
+    <string name="settings">Settings</string>
+    <string name="logout">Logout</string>
 </resources>

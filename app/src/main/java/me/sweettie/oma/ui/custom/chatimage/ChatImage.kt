@@ -29,6 +29,7 @@ class ChatImage @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
     val imageView: ImageView
+
     private val loadButton: ImageButton
     private val progressBar: ProgressBar
     private var isLoading = false

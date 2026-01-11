@@ -2,15 +2,21 @@ package me.sweettie.oma.ui.voicechat
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -24,7 +30,7 @@ import me.sweettie.oma.R
 import me.sweettie.oma.databinding.FragmentVoiceChatBinding
 import me.sweettie.oma.network.GrpcClient
 import me.sweettie.oma.network.services.voip.VoipForegroundService
-import me.sweettie.oma.ui.chat.ChatFragmentArgs
+import me.sweettie.oma.network.whip.ScreenCaptureService
 import me.sweettie.oma.ui.main.MainActivity
 import me.sweettie.oma.ui.main.MainViewModel
 import me.sweettie.oma.ui.webrtc.WebRtcPlayerActivity
@@ -42,7 +48,6 @@ class VoiceChatFragment : Fragment() {
     private val binding get() = _binding!!
 
 
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -52,12 +57,13 @@ class VoiceChatFragment : Fragment() {
         return binding.root
     }
 
-    private val args: ChatFragmentArgs by navArgs()
+    private val args: VoiceChatFragmentArgs by navArgs()
 
 
-    @SuppressLint("SetTextI18n")
+    @SuppressLint("SetTextI18n", "ServiceCast")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        SessionManager.selectedChannel = args.channelId
 
         binding.backBtn.setOnClickListener {
             val navController =
@@ -80,6 +86,7 @@ class VoiceChatFragment : Fragment() {
             binding.channelName.text =
                 "voice \"${SessionManager.selectedServer!!.hashChannels[args.channelId]!!.name}\""
         }
+
         renderVoiceMembers()
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -162,6 +169,22 @@ class VoiceChatFragment : Fragment() {
             }
         }
 
+//        SessionManager.iInternetReconnect = object : IInternetReconnect {
+//            override fun reconnect(network: Network) {
+//                lifecycleScope.launch {
+//
+//                    if (checkIfInVoice()) {
+//                        val stopIntent =
+//                            Intent(requireContext(), VoipForegroundService::class.java).apply {
+//                                action = VoipForegroundService.ACTION_STOP
+//                            }
+//                        requireContext().startService(stopIntent)
+//                    }
+//                    startVoiceChat()
+//                }
+//            }
+//        }
+
         binding.btnHangup.setOnClickListener {
             val isRunning =
                 isServiceForegrounded(requireContext(), VoipForegroundService::class.java)
@@ -172,7 +195,14 @@ class VoiceChatFragment : Fragment() {
                     action = VoipForegroundService.ACTION_STOP
                 }
                 requireContext().startService(stopIntent)
+
+                val stopIntentScreenCapture =
+                    Intent(requireContext(), ScreenCaptureService::class.java).apply {
+                        action = ScreenCaptureService.ACTION_STOP
+                    }
+                requireContext().startService(stopIntentScreenCapture)
             }
+
         }
 
         if (SessionManager.muted) {
@@ -227,11 +257,46 @@ class VoiceChatFragment : Fragment() {
             }
             requireContext().startService(intent)
         }
+
+        binding.btnScreenShare.setOnClickListener {
+            if (!checkIfStreaming()) {
+//                onStartStreamClicked()
+//                onStartCameraStreamClicked()
+
+                val popup = PopupMenu(requireContext(), it)
+                popup.menu.add(0, 1, 0, "Screen Share")
+                popup.menu.add(0, 2, 1, "Camera Share")
+                popup.setOnMenuItemClickListener { item ->
+                    when (item.itemId) {
+                        1 -> {
+                            onStartStreamClicked()       // ваш метод для ScreenShare
+                            true
+                        }
+
+                        2 -> {
+                            onStartCameraStreamClicked() // ваш метод для CameraShare
+                            true
+                        }
+
+                        else -> false
+                    }
+                }
+                popup.show()
+            } else {
+                onStopStreamClicked()
+            }
+
+        }
+
         val isRunning = isServiceForegrounded(requireContext(), VoipForegroundService::class.java)
         if (isRunning) {
             changeBottomState()
             startCallTimer()
             startSpeakingIndicatorWorker()
+        }
+
+        if (args.join) {
+            binding.btnJoinCall.callOnClick()
         }
     }
 
@@ -247,6 +312,101 @@ class VoiceChatFragment : Fragment() {
         }
     }
 
+    private val mediaProjectionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            lifecycleScope.launch {
+                val r = GrpcClient.getVideoRelay(args.serverId, args.channelId)
+                if (r == null)
+                    return@launch
+                println("Address: ${r.address}")
+                val adr = Utils.makeWriteURL(
+                    r.address,
+                    args.serverId,
+                    args.channelId,
+                    SessionManager.currentUser!!.id,
+                    UUID.randomUUID().toString()
+                )
+                println("Nedded address: $adr")
+                val intent = Intent(requireContext(), ScreenCaptureService::class.java).apply {
+                    action = ScreenCaptureService.ACTION_START
+                    putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, result.resultCode)
+                    putExtra(ScreenCaptureService.EXTRA_RESULT_INTENT, result.data)
+                    putExtra(ScreenCaptureService.EXTRA_WHIP_URL, adr)
+                    putExtra(
+                        ScreenCaptureService.EXTRA_AUTH,
+                        SessionManager.currentUser!!.id + ":" + SessionManager.token
+                    )
+                }
+                ContextCompat.startForegroundService(requireContext(), intent)
+            }
+
+
+        } else {
+            Toast.makeText(requireContext(), "Permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val permissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        val cameraGranted = perms[Manifest.permission.CAMERA] == true
+        println("CAMERA GRANTED: $cameraGranted")
+        if (cameraGranted) {
+
+            startCameraService()
+        } else {
+            Toast.makeText(requireContext(), "Camera permission required", Toast.LENGTH_SHORT)
+                .show()
+        }
+    }
+
+    fun onStartCameraStreamClicked() {
+        permissionsLauncher.launch(arrayOf(Manifest.permission.CAMERA))
+    }
+
+    private fun startCameraService() {
+        lifecycleScope.launch {
+            val r = GrpcClient.getVideoRelay(args.serverId, args.channelId)
+            if (r == null)
+                return@launch
+            val adr = Utils.makeWriteURL(
+                r.address,
+                args.serverId,
+                args.channelId,
+                SessionManager.currentUser!!.id,
+                UUID.randomUUID().toString()
+            )
+            val intent = Intent(requireContext(), ScreenCaptureService::class.java).apply {
+                action = ScreenCaptureService.ACTION_START
+                putExtra(ScreenCaptureService.EXTRA_WHIP_URL, adr)
+                putExtra(
+                    ScreenCaptureService.EXTRA_AUTH,
+                    SessionManager.currentUser!!.id + ":" + SessionManager.token
+                )
+                putExtra("isCamera", true)
+            }
+            ContextCompat.startForegroundService(requireContext(), intent)
+        }
+    }
+
+    fun onStartStreamClicked() {
+        val pm =
+            requireContext().getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        val captureIntent = pm.createScreenCaptureIntent()
+        mediaProjectionLauncher.launch(captureIntent)
+
+    }
+
+
+    fun onStopStreamClicked() {
+        val stop = Intent(requireContext(), ScreenCaptureService::class.java).apply {
+            action = ScreenCaptureService.ACTION_STOP
+        }
+        requireContext().startService(stop)
+    }
+
     fun startVoiceChat() {
         lifecycleScope.launch {
             GrpcClient.getVoiceRequest(args.serverId, args.channelId)
@@ -260,13 +420,22 @@ class VoiceChatFragment : Fragment() {
 
     @SuppressLint("SetTextI18n")
     private fun startCallTimer() {
+        var flag = false
         lifecycleScope.launch {
             while (SessionManager.startCallTime != -1L) {
+
                 val now = System.currentTimeMillis()
                 val elapsedMillis = now - SessionManager.startCallTime
                 if (elapsedMillis < 0) {
                     binding.tvCallTime.text = "00:00"
                 } else {
+                    val inVoice = checkIfInVoice()
+                    if (!inVoice && flag) {
+                        changeBottomState()
+                        return@launch
+                    } else if (inVoice && !flag) {
+                        flag = true
+                    }
                     val minutes = TimeUnit.MILLISECONDS.toMinutes(elapsedMillis)
                     val seconds = TimeUnit.MILLISECONDS.toSeconds(elapsedMillis) % 60
                     val timeString = String.format("%02d:%02d", minutes, seconds)
@@ -287,6 +456,7 @@ class VoiceChatFragment : Fragment() {
                     binding.btnHangup.alpha = 0f
                     binding.tvCallTime.alpha = 0f
                     binding.btnSpeaker.alpha = 0f
+                    binding.btnScreenShare.alpha = 0f
                     binding.btnMute.animate().alpha(1f).setDuration(200).withStartAction {
                         binding.btnMute.visibility = View.VISIBLE
                     }.start()
@@ -299,10 +469,14 @@ class VoiceChatFragment : Fragment() {
                     binding.btnSpeaker.animate().alpha(1f).setDuration(200).withStartAction {
                         binding.btnSpeaker.visibility = View.VISIBLE
                     }.start()
+                    binding.btnScreenShare.animate().alpha(1f).setDuration(200).withStartAction {
+                        binding.btnScreenShare.visibility = View.VISIBLE
+                    }.start()
                 }
             }.start()
         else {
             speakingIndicatorJob?.cancel()
+            SessionManager.startCallTime = -1L
             speakingIndicatorJob = null
             binding.btnMute.animate().alpha(0f).setDuration(200).withEndAction {
                 binding.btnMute.visibility = View.GONE
@@ -312,6 +486,9 @@ class VoiceChatFragment : Fragment() {
             }.start()
             binding.btnSpeaker.animate().alpha(0f).setDuration(200).withEndAction {
                 binding.btnSpeaker.visibility = View.GONE
+            }.start()
+            binding.btnScreenShare.animate().alpha(0f).setDuration(200).withEndAction {
+                binding.btnScreenShare.visibility = View.GONE
             }.start()
             binding.tvCallTime.animate().alpha(0f).setDuration(200).withEndAction {
                 binding.tvCallTime.visibility = View.GONE
@@ -352,6 +529,14 @@ class VoiceChatFragment : Fragment() {
         }
     }
 
+    private fun checkIfInVoice(): Boolean {
+        return isServiceForegrounded(requireContext(), VoipForegroundService::class.java)
+    }
+
+    private fun checkIfStreaming(): Boolean {
+        return isServiceForegrounded(requireContext(), ScreenCaptureService::class.java)
+    }
+
     private var speakingIndicatorJob: Job? = null
 
     private fun startSpeakingIndicatorWorker() {
@@ -359,7 +544,21 @@ class VoiceChatFragment : Fragment() {
 
         speakingIndicatorJob = lifecycleScope.launch {
             while (isActive) {
+
                 delay(200) // Обновляем каждые 200 мс, можно изменить на 100 или 300
+
+                val newTint = if (checkIfStreaming()) {
+                    ContextCompat.getColor(
+                        requireContext(),
+                        R.color.colorAlizarin
+                    )
+                } else {
+                    ContextCompat.getColor(requireContext(), R.color.white)
+                }
+                binding.btnScreenShare.setColorFilter(
+                    newTint,
+                    android.graphics.PorterDuff.Mode.SRC_IN
+                )
 
                 members.forEach { (uuid, view) ->
                     val isSpeaking = if (SessionManager.currentUser!!.id.equals(uuid.toString()))
@@ -390,7 +589,7 @@ class VoiceChatFragment : Fragment() {
                             )
                         }
                     } else {
-                        if (thumbnail == null) {
+                        if (thumbnail == null || thumbnail.bitmap == null) {
                             imageView.setImageDrawable(
                                 AppCompatResources.getDrawable(
                                     requireContext(),
@@ -425,8 +624,15 @@ class VoiceChatFragment : Fragment() {
                         }
                         imageView.setColorFilter(newTint, android.graphics.PorterDuff.Mode.SRC_IN)
                     }
+
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        SessionManager.iInternetReconnect = null
     }
 }

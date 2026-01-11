@@ -7,56 +7,71 @@
     android:layout_height="match_parent"
     tools:context=".ui.photoview.FullScreenActivity">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+
+    <FrameLayout
         android:layout_width="match_parent"
-        android:transitionName="actionBar"
-        android:background="@color/colorBackgroundDark"
-        app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone"
+        android:transitionName="shared_image"
+        android:id="@+id/videoFrame"
+        android:layout_height="match_parent">
+
+        <androidx.media3.ui.PlayerView
+            android:id="@+id/playerView"
+            android:transitionName="shared_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/action_bar_"
+        android:layout_width="match_parent"
+        android:layout_height="?android:attr/actionBarSize"
+        android:background="@color/colorBackgroundDark"
         android:orientation="horizontal"
-        android:layout_height="?android:attr/actionBarSize">
+        android:transitionName="actionBar"
+        app:layout_constraintTop_toTopOf="parent">
 
         <ImageButton
             android:id="@+id/back_btn"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:background="@android:color/transparent"
+            android:contentDescription="@string/back"
             android:minWidth="42dp"
             android:src="@drawable/ic_back"
             app:layout_constraintLeft_toLeftOf="parent"
             app:tint="@color/white"
-            tools:ignore="SpeakableTextPresentCheck"
-            android:contentDescription="@string/back" />
+            tools:ignore="SpeakableTextPresentCheck" />
 
         <TextView
+            android:id="@+id/channel_name"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            app:layout_constraintLeft_toRightOf="@id/back_btn"
-            android:textAlignment="gravity"
+            android:gravity="center_vertical"
             android:paddingStart="@dimen/x3_def_padding"
             android:paddingEnd="@dimen/x2_def_padding"
-            android:textStyle="bold"
+            android:textAlignment="gravity"
             android:textSize="20sp"
-            android:id="@+id/channel_name"
-            android:gravity="center_vertical" />
+            android:textStyle="bold"
+            app:layout_constraintLeft_toRightOf="@id/back_btn" />
 
         <ImageButton
             android:id="@+id/option_btn"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            app:layout_constraintRight_toRightOf="parent"
             android:background="@android:color/transparent"
+            android:contentDescription="@string/channel_option"
             android:minWidth="42dp"
-            app:tint="@color/white"
             android:src="@drawable/ic_dots"
-            tools:ignore="SpeakableTextPresentCheck"
-            android:contentDescription="@string/channel_option" />
+            app:layout_constraintRight_toRightOf="parent"
+            app:tint="@color/white"
+            tools:ignore="SpeakableTextPresentCheck" />
 
         <com.google.android.material.divider.MaterialDivider
             android:layout_width="match_parent"
-            android:padding="0dp"
-            android:layout_margin="0dp"
             android:layout_height="wrap_content"
+            android:layout_margin="0dp"
+            android:padding="0dp"
             app:layout_constraintBottom_toBottomOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -65,9 +80,9 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:transitionName="shared_image"
-        app:layout_constraintTop_toBottomOf="@id/action_bar_"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent" />
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/action_bar_" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
