@@ -377,4 +377,9 @@ class HomeFragment : Fragment() {
         _binding = null
     }
 
+    fun updateAllAdapters() {
+        (binding.rvServers.adapter as ServerAdapter).notifyDataSetChanged()
+        (binding.serverChannels.adapter as ChannelAdapter).notifyDataSetChanged()
+    }
+
 }
