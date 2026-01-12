@@ -38,8 +38,10 @@ class MainViewModel : ViewModel() {
             OmaOuterClass.Event.EventCase.KEEPALIVE -> {
                 val lastPing = SessionManager.lastPingTime
                 val now = System.currentTimeMillis()
-                if (lastPing - now > 11 * 1000) {
-                    _uiState.value = UiState.UpdateNow(0)
+                println("TIMES BETWEEN PINGS: ${(now - lastPing) / 1000}")
+                if (now - lastPing > 11 * 1000) {
+//                    _uiState.value = UiState.UpdateNow(0)
+                    println("Now do nothing in events....")
                 }
                 SessionManager.lastPingTime = System.currentTimeMillis()
             }

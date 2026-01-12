@@ -14,7 +14,10 @@ import proto.OmaOuterClass
 
 class EventRepository {
     val events: Flow<OmaOuterClass.Event> = GrpcClient.subscribeToEvents()
-        .repeatOnComplete()
+        .repeatOnComplete(onConnected = {
+            println("✅ Подключение установлено — получена первая секция")
+            SessionManager.updateFunction?.invoke()
+        })
         .onStart { println("📡 [EventRepository] Подписка запущена") }
         .retryOnFailure()
         .onCompletion { cause ->
@@ -50,12 +53,24 @@ class EventRepository {
 }
 
 
-fun <T> Flow<T>.repeatOnComplete(delayMillis: Long = 1000L): Flow<T> = flow {
+fun <T> Flow<T>.repeatOnComplete(
+    delayMillis: Long = 1000L,
+    onConnected: suspend () -> Unit = {}
+): Flow<T> = flow {
     while (true) {
+        var connected = false
         try {
-            collect { emit(it) }
+            collect { value ->
+                if (!connected) {
+                    connected = true
+                    onConnected() // вызываем при первой полученной записи в этой сессии
+                }
+                emit(value)
+            }
+            // сюда попадём, когда upstream корректно завершился
             delay(delayMillis)
         } catch (e: Throwable) {
+            // при ошибке цикл прервётся вверх по стэку (или можно реализовать backoff и retry)
             throw e
         }
     }

@@ -36,11 +36,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.sweettie.oma.R
+import me.sweettie.oma.data.MessageList
 import me.sweettie.oma.data.Server
 import me.sweettie.oma.network.GrpcClient
+import me.sweettie.oma.ui.home.HomeFragment
 import me.sweettie.oma.ui.home.HomeFragmentDirections
 import me.sweettie.oma.ui.main.MainViewModel.UiState
+import me.sweettie.oma.utils.SecurePrefs
 import me.sweettie.oma.utils.SessionManager
 import me.sweettie.oma.utils.SessionState
 import proto.OmaOuterClass
@@ -189,6 +193,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        SessionManager.updateFunction = ::updateLogic
     }
 
     fun updateLogic() {
@@ -206,20 +212,20 @@ class MainActivity : AppCompatActivity() {
                     servers.add(Server(it))
                 }
                 SessionManager.servers = servers
-                servers.forEach {
-                    it.loadAllNecessaryInfo()
-                    println("SELECTED: ${SessionManager.selectedServer!!.space.name} ${SessionManager.selectedChannel}")
-                    if (SessionManager.selectedChannel != null && it.space.id == SessionManager.selectedServer!!.space.id) {
-                        val oldCopy =
-                            SessionManager.cachedMessageList[SessionManager.selectedChannel!!]!!.message_.messagesList
-                        GrpcClient.getMessages(
-                            SessionManager.selectedServer!!.space.id,
-                            SessionManager.selectedChannel!!,
-                            0,
-                            onSuccess = {
+
+                SessionManager.servers.forEach { s ->
+                    s.loadAllNecessaryInfo()
+                    s.hashChannels.forEach {
+
+
+                        GrpcClient.getMessages(s.space.id, it.value.id, 0, onSuccess = { ml_ ->
+
+                            if (SessionManager.selectedChannel != null && s.space.id == SessionManager.selectedServer!!.space.id) {
+                                val oldCopy =
+                                    SessionManager.cachedMessageList[SessionManager.selectedChannel!!]!!.message_.messagesList
                                 val newCopy: ArrayList<OmaOuterClass.Message> =
-                                    ArrayList(it.messagesList)
-                                for (m in it.messagesList) {
+                                    ArrayList(ml_.messagesList)
+                                for (m in ml_.messagesList) {
                                     if (oldCopy.contains(m))
                                         newCopy.remove(m)
                                 }
@@ -234,16 +240,54 @@ class MainActivity : AppCompatActivity() {
                                         .build()
                                     SessionManager.viewModel.handleEvent(e)
                                 }
+//                                GrpcClient.getMessages(
+//                                    SessionManager.selectedServer!!.space.id,
+//                                    SessionManager.selectedChannel!!,
+//                                    0,
+//                                    onSuccess = {
+//
+//
+//                                    },
+//                                    onError = {
+//                                        println("SOME ERROR WHILE GETTING CHAT MESSAGES")
+//                                        it.printStackTrace()
+//                                    })
+                            }
 
-                            },
-                            onError = {
-                                println("SOME ERROR WHILE GETTING CHAT MESSAGES")
-                                it.printStackTrace()
-                            })
+                            // LOAD MESSAGE LIST, CHECK LAST SAVED MESSAGE, IF LAST SAVED MESSAGE ID NOT EQUALS NEW LAST MESSAGE ID - MARK HIM AS UNREAD
+                            val ml = MessageList(s.space.id, it.value.id, ml_)
+                            SessionManager.cachedMessageList[it.value.id] = ml
+                            val lastMessage = ml.messageLis[0]
+                            if (!SecurePrefs.sf!!.getString("last_${s.space.id}_${it.key}", "")
+                                    .equals(lastMessage.id)
+                            ) {
+                                val temp = SessionManager.unreadedMessages.getOrDefault(
+                                    s.space.id,
+                                    arrayListOf()
+                                )
+                                if (!temp.contains(it.value.id)) {
+                                    temp.add(it.value.id)
+                                    SessionManager.unreadedMessages.put(s.space.id, temp)
+                                }
+                            }
+
+                        }, onError = {})
                     }
                 }
                 hideTopBanner()
 
+                if (navController.currentDestination?.id == R.id.homeFragment) {
+                    // NavController считает, что сейчас Home
+                }
+
+                withContext(Dispatchers.Main) {
+                    val navHost =
+                        supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
+                    val current = navHost?.childFragmentManager?.primaryNavigationFragment
+                    if (current is HomeFragment) {
+                        current.updateAllAdapters()
+                    }
+                }
             }
         })
     }

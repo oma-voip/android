@@ -14,6 +14,7 @@ import me.sweettie.oma.ui.main.MainViewModel
 import me.sweettie.oma.updater.VersionInfo
 import proto.OmaOuterClass
 import java.util.UUID
+import kotlin.reflect.KFunction0
 
 enum class SessionState {
     NULL,
@@ -25,6 +26,7 @@ enum class SessionState {
 
 object SessionManager {
 
+    var updateFunction: KFunction0<Unit>? = null
     var iInternetReconnect: IInternetReconnect? = null
     var networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
