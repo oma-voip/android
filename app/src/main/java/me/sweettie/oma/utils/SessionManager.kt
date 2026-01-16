@@ -26,6 +26,8 @@ enum class SessionState {
 
 object SessionManager {
 
+    var waitingNetworkFunction: KFunction0<Unit>? = null
+    var needForceUpdate: Boolean = false
     var updateFunction: KFunction0<Unit>? = null
     var iInternetReconnect: IInternetReconnect? = null
     var networkCallback = object : ConnectivityManager.NetworkCallback() {

@@ -12,7 +12,7 @@ class Server(
 
     val hashChannels: HashMap<String, OmaOuterClass.Channel> = HashMap()
 
-    lateinit var members: List<OmaOuterClass.User>
+    var members: List<OmaOuterClass.User> = listOf()
     suspend fun loadAllNecessaryInfo() {
         val r = GrpcClient.getSpace(space.id) ?: return
         members = r.membersList

@@ -34,6 +34,10 @@ class MainViewModel : ViewModel() {
 
     fun handleEvent(event: OmaOuterClass.Event) {
         println("New Event: ${event.eventCase}")
+        if (SessionManager.needForceUpdate) {
+            SessionManager.updateFunction?.invoke()
+            SessionManager.needForceUpdate = false
+        }
         when (event.eventCase) {
             OmaOuterClass.Event.EventCase.KEEPALIVE -> {
                 val lastPing = SessionManager.lastPingTime

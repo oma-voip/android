@@ -53,6 +53,7 @@
     <string name="decline">decline</string>
     <string name="incoming_call">Incoming call…</string>
     <string name="fetching_update">Fetching update…</string>
+    <string name="waiting_network">Waiting network…</string>
     <string name="send_direct_message"><u>Send Direct Message</u></string>
     <string name="user_id">User ID</string>
     <string name="settings">Settings</string>

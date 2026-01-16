@@ -22,6 +22,7 @@ import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.GestureDetectorCompat
@@ -195,10 +196,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         SessionManager.updateFunction = ::updateLogic
+        SessionManager.waitingNetworkFunction = ::waitingNetwork
+
+
     }
 
+    fun waitingNetwork() {
+        showTopBanner(getString(R.string.waiting_network)) { }
+    }
     fun updateLogic() {
-        showTopBanner(false, {
+        hideTopBanner()
+        showTopBanner(getString(R.string.fetching_update), false, {
             lifecycleScope.launch {
                 println("TRY TO UPDATE....")
                 val t = GrpcClient.getServers()
@@ -211,23 +219,38 @@ class MainActivity : AppCompatActivity() {
                     println("STARTUP: prepear server with id ${it.id}")
                     servers.add(Server(it))
                 }
+                SessionManager.servers.forEach { s ->
+                    s.hashChannels.forEach {
+                        SessionManager.channelMembers.remove(it.key)
+                    }
+                }
                 SessionManager.servers = servers
 
                 SessionManager.servers.forEach { s ->
+
+
                     s.loadAllNecessaryInfo()
+                    s.members.forEach {
+                        SessionManager.updateOnlineInfo(it.id, it.online)
+                    }
                     s.hashChannels.forEach {
 
 
                         GrpcClient.getMessages(s.space.id, it.value.id, 0, onSuccess = { ml_ ->
 
-                            if (SessionManager.selectedChannel != null && s.space.id == SessionManager.selectedServer!!.space.id) {
+                            if (SessionManager.selectedChannel != null && s.space.id == SessionManager.selectedServer!!.space.id && it.key == SessionManager.selectedChannel) {
                                 val oldCopy =
                                     SessionManager.cachedMessageList[SessionManager.selectedChannel!!]!!.message_.messagesList
                                 val newCopy: ArrayList<OmaOuterClass.Message> =
                                     ArrayList(ml_.messagesList)
+                                newCopy.reverse()
                                 for (m in ml_.messagesList) {
-                                    if (oldCopy.contains(m))
-                                        newCopy.remove(m)
+                                    for (mo in oldCopy) {
+                                        if (mo.id.equals(m.id)) {
+                                            newCopy.remove(m)
+                                            break
+                                        }
+                                    }
                                 }
                                 println("NEW COPY: ${newCopy.size}")
                                 for (m in newCopy) {
@@ -238,8 +261,10 @@ class MainActivity : AppCompatActivity() {
                                             .setMessage(m)
                                     )
                                         .build()
+                                    println("Build new message $m, ")
                                     SessionManager.viewModel.handleEvent(e)
                                 }
+                                SecurePrefs.save("last_${s.space.id}_${it.key}", newCopy.get(0).id)
 //                                GrpcClient.getMessages(
 //                                    SessionManager.selectedServer!!.space.id,
 //                                    SessionManager.selectedChannel!!,
@@ -275,10 +300,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 hideTopBanner()
-
-                if (navController.currentDestination?.id == R.id.homeFragment) {
-                    // NavController считает, что сейчас Home
-                }
 
                 withContext(Dispatchers.Main) {
                     val navHost =
@@ -371,6 +392,7 @@ class MainActivity : AppCompatActivity() {
 
 
     fun showTopBanner(
+        text: String? = null,
         touchable: Boolean = true,
         onUpdate: (() -> Unit)? = null
     ) {
@@ -398,6 +420,8 @@ class MainActivity : AppCompatActivity() {
 
             try {
                 bannerParams = lp
+                if (text != null)
+                    bannerView!!.findViewById<TextView>(R.id.bannerText).text = text
                 bannerView!!.visibility = View.VISIBLE
             } catch (e: Exception) {
                 e.printStackTrace()

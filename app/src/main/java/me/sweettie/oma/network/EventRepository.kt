@@ -15,11 +15,13 @@ import proto.OmaOuterClass
 class EventRepository {
     val events: Flow<OmaOuterClass.Event> = GrpcClient.subscribeToEvents()
         .repeatOnComplete(onConnected = {
+            SessionManager.needForceUpdate = true
             println("✅ Подключение установлено — получена первая секция")
-            SessionManager.updateFunction?.invoke()
         })
-        .onStart { println("📡 [EventRepository] Подписка запущена") }
-        .retryOnFailure()
+        .retryOnFailure() // <- теперь retry срабатывает для всей repeatOnComplete
+        .onStart {
+            println("📡 [EventRepository] Подписка запущена")
+        }
         .onCompletion { cause ->
             if (cause != null) {
                 println("⚠️ [EventRepository] Подписка завершена с ошибкой: $cause")
@@ -40,6 +42,7 @@ class EventRepository {
 
     private fun Flow<OmaOuterClass.Event>.retryOnFailure(): Flow<OmaOuterClass.Event> {
         return this.retryWhen { cause, attempt ->
+            SessionManager.waitingNetworkFunction?.invoke()
             println("Subscription failed (attempt $attempt): $cause")
             delay(1000)
             true
